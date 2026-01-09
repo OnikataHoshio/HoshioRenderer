@@ -17,7 +17,7 @@ const glm::vec3 RED(0.9f, 0.2f, 0.2f);
 const glm::vec3 WHITE(1.0f, 1.0f, 1.0f);
 const glm::vec3 GREEN(0.2f, 0.9f, 0.2f);
 const glm::vec3 WARM_WHITE(1.0f, 1.0f, 0.9f);
-const int SAMPLE_COUNT = 256;
+const int SAMPLE_COUNT = 1;
 
 
 std::uniform_real_distribution<> Distrubution(0.0, 1.0);

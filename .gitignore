@@ -5,8 +5,10 @@
 
 # Visual Studio Generation files
 *.sln
+*.slnx
 *.vcxproj
 *.vcxproj.filters
+*.vcxproj.user
 
 # User-specific files
 *.rsuser
