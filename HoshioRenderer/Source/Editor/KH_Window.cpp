@@ -79,6 +79,7 @@ void KH_Window::Initialize()
     glfwSetScrollCallback(Window, MouseScrollCallback);
 
     glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSwapInterval(1);
 }
 
 void KH_Window::DeInitialize()
@@ -141,9 +142,9 @@ void KH_Window::MouseMovementCallback(GLFWwindow* window, double xposIn, double 
 {
     static float LastMouseX = 0.0f;
     static float LastMouseY = 0.0f;
-    static float OffsetX = 0.0f;
-    static float OffsetY = 0.0f;
     static bool bFirstMouse = true;
+
+    if (!Camera) return;
 
     float xpos = static_cast<float>(xposIn);
     float ypos = static_cast<float>(yposIn);
@@ -153,10 +154,11 @@ void KH_Window::MouseMovementCallback(GLFWwindow* window, double xposIn, double 
         LastMouseX = xpos;
         LastMouseY = ypos;
         bFirstMouse = false;
+        return; 
     }
 
-    OffsetX = xpos - LastMouseX;
-    OffsetY = ypos - LastMouseY;
+    float OffsetX = xpos - LastMouseX;
+    float OffsetY = LastMouseY - ypos; // 注意这里反过来
 
     LastMouseX = xpos;
     LastMouseY = ypos;
