@@ -11,14 +11,19 @@ int main()
 
 	KH_Shader TestShader("Assert/Shaders/test.vert", "Assert/Shaders/test.frag");
 
+	KH_Model Bunny;
+	Bunny.LoadOBJ("Assert/Models/bunny.obj");
+
 	while (!glfwWindowShouldClose(KH_Editor::Instance().GLFWwindow()))
 	{
 		KH_Editor::Instance().BeginRender();
 
 		glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-		KH_DefaultModels::Get().Cube.Render(TestShader);
+		//KH_DefaultModels::Get().Cube.Render(TestShader);
+		Bunny.Render(TestShader);
 
 		KH_Editor::Instance().EndRender();
 	}

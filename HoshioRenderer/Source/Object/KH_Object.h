@@ -18,8 +18,6 @@ public:
 
 	glm::mat4 GetModelMatrix();
 
-	static void SetCamera(KH_Camera* Camera);
-	static KH_Camera* Camera;
 };
 
 class KH_Model : public KH_Object
@@ -38,11 +36,13 @@ public:
 
 	void SetIndices(std::vector<uint32_t>& Indices);
 
+	uint32_t GetIndicesSize();
+
+	uint32_t GetVerticesSize();
+
 	unsigned int VBO = 0;
 	unsigned int EBO = 0;
 	unsigned int VAO = 0;
-
-	bool bHasUpdate = false;
 
 private:
 	void Clear();

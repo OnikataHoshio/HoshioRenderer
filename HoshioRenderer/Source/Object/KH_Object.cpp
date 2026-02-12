@@ -1,10 +1,9 @@
 #define TINYOBJLOADER_IMPLEMENTATION
-#include "tiny_obj_loader.h"
 #include "KH_Object.h"
 #include "Pipeline/KH_Shader.h"
 #include "Editor/KH_Camera.h"
+#include "Editor/KH_Editor.h"
 
-KH_Camera* KH_Object::Camera = nullptr;
 
 glm::mat4 KH_Object::GetModelMatrix()
 {
@@ -21,10 +20,6 @@ glm::mat4 KH_Object::GetModelMatrix()
     return Model;
 }
 
-void KH_Object::SetCamera(KH_Camera* Camera)
-{
-    KH_Object::Camera = Camera;
-}
 
 bool KH_Model::LoadOBJ(const std::string& path)
 {
@@ -55,6 +50,8 @@ bool KH_Model::LoadOBJ(const std::string& path)
             Indices.push_back(static_cast<uint32_t>(Indices.size()));
         }
     }
+
+    UpdateBuffer();
 
     return true;
 }
@@ -88,16 +85,10 @@ void KH_Model::UpdateBuffer()
 
 void KH_Model::Render(KH_Shader& Shader)
 {
-    if (!bHasUpdate)
-    {
-        UpdateBuffer();
-        bHasUpdate = true;
-    }
-
     Shader.Use();
     Shader.SetMat4("model", GetModelMatrix());
-    Shader.SetMat4("view", Camera->GetViewMatrix());
-    Shader.SetMat4("projection", Camera->GetProjMatrix());
+    Shader.SetMat4("view", KH_Editor::Instance().Camera.GetViewMatrix());
+    Shader.SetMat4("projection", KH_Editor::Instance().Camera.GetViewMatrix());
 
     glBindVertexArray(this->VAO);
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(Indices.size()), GL_UNSIGNED_INT, 0);
@@ -127,6 +118,16 @@ void KH_Model::SetVertices(std::vector<glm::vec3>& Vertices)
 void KH_Model::SetIndices(std::vector<uint32_t>& Indices)
 {
     this->Indices = Indices;
+}
+
+uint32_t KH_Model::GetIndicesSize()
+{
+    return Indices.size();
+}
+
+uint32_t KH_Model::GetVerticesSize()
+{
+    return Vertices.size();
 }
 
 
@@ -170,4 +171,5 @@ void KH_DefaultModels::InitCube()
     Cube.SetVertices(Vertices);
     Cube.SetIndices(Indices);
 
+    Cube.UpdateBuffer();
 }

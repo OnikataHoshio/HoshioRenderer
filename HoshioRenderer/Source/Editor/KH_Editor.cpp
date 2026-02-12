@@ -1,6 +1,4 @@
 #include "KH_Editor.h"
-#include "Object/KH_Object.h"
-
 uint32_t KH_Editor::Width = 1920;
 uint32_t KH_Editor::Height = 1080;
 std::string KH_Editor::Title = "KH_Renderer";
@@ -41,7 +39,7 @@ KH_Editor::~KH_Editor()
 
 void KH_Editor::Initialize()
 {
-	KH_Object::SetCamera(&Camera);
+
 }
 
 void KH_Editor::DeInitialize()
