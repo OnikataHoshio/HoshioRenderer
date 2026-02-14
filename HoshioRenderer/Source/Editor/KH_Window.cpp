@@ -3,6 +3,12 @@
 
 KH_Camera* KH_Window::Camera = nullptr;
 
+bool KH_Window::bCameraLocked = true;
+
+float KH_Window::LastMouseX = 0.0f;
+float KH_Window::LastMouseY = 0.0f;
+bool KH_Window::bFirstMouse = true;
+
 KH_Window::KH_Window(uint32_t Width, uint32_t Height, std::string Title)
 	:Width(Width), Height(Height), Title(Title)
 {
@@ -16,24 +22,25 @@ KH_Window::~KH_Window()
 
 void KH_Window::AddInputCallback(const InputCallback& callback)
 {
-    M_InputCallbacks.push_back(callback);
+    InputCallbacks.push_back(callback);
 }
 
 void KH_Window::AddResizeCallback(const ResizeCallback& callback)
 {
-    M_ResizeCallbacks.push_back(callback);
+    ResizeCallbacks.push_back(callback);
 }
 
 void KH_Window::BeginRender()
 {
     ProcessData();
     ProcessInput(Window);
+
 }
 
 void KH_Window::EndRender()
 {
-    glfwSwapBuffers(Window);
     glfwPollEvents();
+    glfwSwapBuffers(Window);
 }
 
 void KH_Window::Initialize()
@@ -77,8 +84,9 @@ void KH_Window::Initialize()
     glfwSetFramebufferSizeCallback(Window, FramebufferSizeCallback);
     glfwSetCursorPosCallback(Window, MouseMovementCallback);
     glfwSetScrollCallback(Window, MouseScrollCallback);
+    glfwSetMouseButtonCallback(Window, MouseButtonCallback);
 
-    glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
     glfwSwapInterval(1);
 }
 
@@ -100,19 +108,28 @@ void KH_Window::ProcessInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        Camera->ProcessKeyboard(CameraMovement::Forward, DeltaTime);
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        Camera->ProcessKeyboard(CameraMovement::Left, DeltaTime);
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        Camera->ProcessKeyboard(CameraMovement::Backward, DeltaTime);
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        Camera->ProcessKeyboard(CameraMovement::Right, DeltaTime);
+
+    if (!bCameraLocked)
+    {
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            Camera->ProcessKeyboard(CameraMovement::Forward, DeltaTime);
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+            Camera->ProcessKeyboard(CameraMovement::Left, DeltaTime);
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            Camera->ProcessKeyboard(CameraMovement::Backward, DeltaTime);
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+            Camera->ProcessKeyboard(CameraMovement::Right, DeltaTime);
+        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+            Camera->ProcessKeyboard(CameraMovement::Up, DeltaTime);
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+            Camera->ProcessKeyboard(CameraMovement::Down, DeltaTime);
+    }
+
 
     auto* self = static_cast<KH_Window*>(glfwGetWindowUserPointer(window));
     if (!self) return;
 
-    for (const auto& callback : self->M_InputCallbacks)
+    for (const auto& callback : self->InputCallbacks)
     {
         callback(window);
     }
@@ -123,8 +140,6 @@ void KH_Window::SetCamera(KH_Camera* Camera)
     this->Camera = Camera;
 }
 
-
-
 void KH_Window::FramebufferSizeCallback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
@@ -132,7 +147,7 @@ void KH_Window::FramebufferSizeCallback(GLFWwindow* window, int width, int heigh
     auto* self = static_cast<KH_Window*>(glfwGetWindowUserPointer(window));
     if (!self) return;
 
-    for (const auto& callback : self->M_ResizeCallbacks)
+    for (const auto& callback : self->ResizeCallbacks)
     {
         callback(window, width, height);
     }
@@ -140,11 +155,7 @@ void KH_Window::FramebufferSizeCallback(GLFWwindow* window, int width, int heigh
 
 void KH_Window::MouseMovementCallback(GLFWwindow* window, double xposIn, double yposIn)
 {
-    static float LastMouseX = 0.0f;
-    static float LastMouseY = 0.0f;
-    static bool bFirstMouse = true;
-
-    if (!Camera) return;
+    if (!Camera || bCameraLocked) return;
 
     float xpos = static_cast<float>(xposIn);
     float ypos = static_cast<float>(yposIn);
@@ -154,7 +165,6 @@ void KH_Window::MouseMovementCallback(GLFWwindow* window, double xposIn, double 
         LastMouseX = xpos;
         LastMouseY = ypos;
         bFirstMouse = false;
-        return; 
     }
 
     float OffsetX = xpos - LastMouseX;
@@ -169,4 +179,62 @@ void KH_Window::MouseMovementCallback(GLFWwindow* window, double xposIn, double 
 void KH_Window::MouseScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 {
     Camera->ProcessMouseScroll(yoffset);
+}
+
+void KH_Window::MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
+{
+    if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        bCameraLocked = false;
+        bFirstMouse = true;
+    }
+
+    if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE)
+    {
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        bCameraLocked = true;
+        bFirstMouse = true;
+    }
+}
+
+//TODO::ADD Funcction to CallbackVector
+void KH_Window::WindowCloseCallback(GLFWwindow* window)
+{
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
+}
+
+void KH_Window::CameraMovementCallback(GLFWwindow* window)
+{
+    if (!bCameraLocked)
+    {
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            Camera->ProcessKeyboard(CameraMovement::Forward, DeltaTime);
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+            Camera->ProcessKeyboard(CameraMovement::Left, DeltaTime);
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            Camera->ProcessKeyboard(CameraMovement::Backward, DeltaTime);
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+            Camera->ProcessKeyboard(CameraMovement::Right, DeltaTime);
+        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+            Camera->ProcessKeyboard(CameraMovement::Up, DeltaTime);
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+            Camera->ProcessKeyboard(CameraMovement::Down, DeltaTime);
+    }
+}
+
+void KH_Window::CameraLockedCallback(GLFWwindow* window)
+{
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
+    {
+        glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        bCameraLocked = false;
+    }
+
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_RELEASE)
+    {
+        glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        bCameraLocked = true;
+        bFirstMouse = true;
+    }
 }

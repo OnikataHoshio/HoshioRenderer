@@ -38,19 +38,31 @@ private:
 	void ProcessData();
 	void ProcessInput(GLFWwindow* window);
 
-
 	static void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
 
 	static void MouseMovementCallback(GLFWwindow* window, double xposIn, double yposIn);
 
 	static void MouseScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
+
+	static void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 private:
 	float LastFrame = 0.0f;
 	float DeltaTime = 0.0f;
 
+	static bool bCameraLocked;
+
+	static float LastMouseX;
+	static float LastMouseY;
+	static bool bFirstMouse;
+
 	static KH_Camera* Camera;
 
+	std::vector<InputCallback> InputCallbacks;
+	std::vector<ResizeCallback> ResizeCallbacks;
 
-	std::vector<InputCallback> M_InputCallbacks;
-	std::vector<ResizeCallback> M_ResizeCallbacks;
+	void WindowCloseCallback(GLFWwindow* window);
+
+	void CameraMovementCallback(GLFWwindow* window);
+
+	void CameraLockedCallback(GLFWwindow* window);
 };

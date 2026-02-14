@@ -39,6 +39,10 @@ void KH_Camera::ProcessKeyboard(CameraMovement direction, float deltaTime)
         Position -= Right * velocity;
     if (direction == CameraMovement::Right)
         Position += Right * velocity;
+    if (direction == CameraMovement::Up)
+        Position += Up * velocity;
+    if (direction == CameraMovement::Down)
+        Position -= Up * velocity;
 }
 
 void KH_Camera::ProcessMouseMovement(float xoffset, float yoffset, bool constrainPitch)
@@ -62,12 +66,13 @@ void KH_Camera::ProcessMouseMovement(float xoffset, float yoffset, bool constrai
 
 void KH_Camera::ProcessMouseScroll(float yoffset)
 {
-    Zoom -= yoffset;
+    MovementSpeed += yoffset * SpeedSensitivity;
 
-    if (Zoom < 1.0f)
-        Zoom = 1.0f;
-    if (Zoom > 45.0f)
-        Zoom = 45.0f;
+    if (MovementSpeed < 0.1f)
+        MovementSpeed = 0.1f;
+
+    if (MovementSpeed > 20.0f)
+        MovementSpeed = 20.0f;
 }
 
 void KH_Camera::UpdateCameraVectors()

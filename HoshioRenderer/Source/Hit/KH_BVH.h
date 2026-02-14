@@ -38,25 +38,28 @@ public:
 
 	std::vector<KH_Triangle> Triangles;
 	uint32_t MaxBVHDepth;
-	uint32_t MaxBVHNodeTriangleNum;
+	uint32_t MaxLeafTriangles;
 
 	std::vector<glm::mat4> ModelMats;
 	uint32_t MatCount = 0;
 
 	unsigned int ModelMats_SSBO = 0;
 
-	KH_BVH(uint32_t MaxDepth, uint32_t MaxNum);
+	KH_BVH(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles);
 	~KH_BVH() = default;
 
 	void LoadObj(const std::string& path);
 
 	void RenderAABB(KH_Shader Shader, glm::vec3 Color);
 
-	void FillModelMatrices(uint32_t CurrentDepth, uint32_t TargetDepth);
 
 private:
+	void FillModelMatrices(uint32_t TargetDepth);
+
 	void FillModelMatrices_Inner(KH_BVHNode* BVHNode, uint32_t CurrentDepth, uint32_t TargetDepth);
 
 	void UpdateModelMatsSSBO();
+
+	void BuildBVH();
 
 };

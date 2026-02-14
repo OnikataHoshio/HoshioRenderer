@@ -36,9 +36,13 @@ public:
 
 	void SetIndices(std::vector<uint32_t>& Indices);
 
-	uint32_t GetIndicesSize();
+	void SetDrawMode(GLenum DrawMode);
 
-	uint32_t GetVerticesSize();
+	uint32_t GetIndicesSize() const;
+
+	uint32_t GetVerticesSize() const;
+
+	GLenum GetDrawMode() const;
 
 	unsigned int VBO = 0;
 	unsigned int EBO = 0;
@@ -51,12 +55,15 @@ private:
 
 	std::vector<glm::vec3> Vertices;
 	std::vector<uint32_t> Indices;
+
+	GLenum DrawMode = GL_TRIANGLES;
 };
 
 class KH_DefaultModels
 {
 public:
 	KH_Model Cube;
+	KH_Model EmptyCube;
 
 	KH_DefaultModels(const KH_DefaultModels&) = delete;
 	KH_DefaultModels& operator=(const KH_DefaultModels&) = delete;
@@ -69,6 +76,7 @@ private:
 
 	void InitCube();
 
+	void InitEmptyCube();
 };
 
 

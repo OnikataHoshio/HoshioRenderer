@@ -62,8 +62,8 @@ KH_BVH_SPLIT_MODE KH_BVHNode::SelectSplitMode(KH_AABB& AABB)
 	return static_cast<KH_BVH_SPLIT_MODE>(axis);
 }
 
-KH_BVH::KH_BVH(uint32_t MaxDepth, uint32_t MaxNum)
-	:MaxBVHDepth(MaxDepth), MaxBVHNodeTriangleNum(MaxNum)
+KH_BVH::KH_BVH(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles)
+	:MaxBVHDepth(MaxBVHDepth), MaxLeafTriangles(MaxLeafTriangles)
 {
 	Root = std::make_unique<KH_BVHNode>();
 }
@@ -106,6 +106,9 @@ void KH_BVH::LoadObj(const std::string& path)
 			index_offset += fv;
 		}
 	}
+
+	BuildBVH();
+	FillModelMatrices(MaxBVHDepth);
 }
 
 void KH_BVH::RenderAABB(KH_Shader Shader, glm::vec3 Color)
@@ -121,9 +124,9 @@ void KH_BVH::RenderAABB(KH_Shader Shader, glm::vec3 Color)
 
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ModelMats_SSBO);
 
-	glBindVertexArray(KH_DefaultModels::Get().Cube.VAO);
+	glBindVertexArray(KH_DefaultModels::Get().EmptyCube.VAO);
 	glDrawElementsInstanced(
-		GL_TRIANGLES,
+		KH_DefaultModels::Get().EmptyCube.GetDrawMode(),
 		static_cast<GLsizei>(KH_DefaultModels::Get().Cube.GetIndicesSize()), 
 		GL_UNSIGNED_INT,
 		0,
@@ -133,12 +136,12 @@ void KH_BVH::RenderAABB(KH_Shader Shader, glm::vec3 Color)
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
 }
 
-void KH_BVH::FillModelMatrices(uint32_t CurrentDepth, uint32_t TargetDepth)
+void KH_BVH::FillModelMatrices(uint32_t TargetDepth)
 {
 	ModelMats.clear();
 	MatCount = 0;
 
-	FillModelMatrices_Inner(Root.get(), CurrentDepth, TargetDepth);
+	FillModelMatrices_Inner(Root.get(), 0, TargetDepth);
 
 	UpdateModelMatsSSBO();
 }
@@ -148,7 +151,7 @@ void KH_BVH::FillModelMatrices_Inner(KH_BVHNode* BVHNode, uint32_t CurrentDepth,
 	if (BVHNode == nullptr)
 		return;
 
-	if (CurrentDepth == TargetDepth)
+	if (CurrentDepth == TargetDepth || BVHNode->bIsLeaf)
 	{
 		//TODO : Do some optimization
 		ModelMats.push_back(BVHNode->AABB.GetModelMatrix());
@@ -178,4 +181,9 @@ void KH_BVH::UpdateModelMatsSSBO()
 	// glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ModelMats_SSBO);
 
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+}
+
+void KH_BVH::BuildBVH()
+{
+	this->Root->BuildNode(Triangles, 0, Triangles.size(), 0, MaxLeafTriangles, MaxBVHDepth);
 }

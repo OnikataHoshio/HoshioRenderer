@@ -28,6 +28,9 @@ KH_Triangle::KH_Triangle(glm::vec3 P1, glm::vec3 P2, glm::vec3 P3)
     const glm::vec3 P1P3 = P3 - P1;
 
     Normal = glm::normalize(glm::cross(P1P2, P1P3));
+
+    AABB.MinPos = glm::min(P1, glm::min(P2, P3));
+    AABB.MaxPos = glm::max(P1, glm::max(P2, P3));
 }
 
 KH_HitResult KH_Triangle::Hit(KH_Ray& Ray)

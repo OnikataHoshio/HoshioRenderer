@@ -88,10 +88,10 @@ void KH_Model::Render(KH_Shader& Shader)
     Shader.Use();
     Shader.SetMat4("model", GetModelMatrix());
     Shader.SetMat4("view", KH_Editor::Instance().Camera.GetViewMatrix());
-    Shader.SetMat4("projection", KH_Editor::Instance().Camera.GetViewMatrix());
+    Shader.SetMat4("projection", KH_Editor::Instance().Camera.GetProjMatrix());
 
     glBindVertexArray(this->VAO);
-    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(Indices.size()), GL_UNSIGNED_INT, 0);
+    glDrawElements(DrawMode, static_cast<GLsizei>(Indices.size()), GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 }
 
@@ -120,14 +120,24 @@ void KH_Model::SetIndices(std::vector<uint32_t>& Indices)
     this->Indices = Indices;
 }
 
-uint32_t KH_Model::GetIndicesSize()
+void KH_Model::SetDrawMode(GLenum DrawMode)
+{
+    this->DrawMode = DrawMode;
+}
+
+uint32_t KH_Model::GetIndicesSize() const
 {
     return Indices.size();
 }
 
-uint32_t KH_Model::GetVerticesSize()
+uint32_t KH_Model::GetVerticesSize() const
 {
     return Vertices.size();
+}
+
+GLenum KH_Model::GetDrawMode() const 
+{
+    return DrawMode;
 }
 
 
@@ -140,6 +150,7 @@ KH_DefaultModels& KH_DefaultModels::Get()
 KH_DefaultModels::KH_DefaultModels()
 {
     InitCube();
+    InitEmptyCube();
 }
 
 void KH_DefaultModels::InitCube()
@@ -172,4 +183,27 @@ void KH_DefaultModels::InitCube()
     Cube.SetIndices(Indices);
 
     Cube.UpdateBuffer();
+}
+
+void KH_DefaultModels::InitEmptyCube()
+{
+    std::vector<glm::vec3> Vertices = {
+        {-1, -1,  1}, { 1, -1,  1}, { 1,  1,  1}, {-1,  1,  1}, // 前 4 个 (0-3)
+        {-1, -1, -1}, { 1, -1, -1}, { 1,  1, -1}, {-1,  1, -1}  // 后 4 个 (4-7)
+    };
+
+    std::vector<unsigned int> Indices = {
+        // 底面
+        0, 1, 1, 5, 5, 4, 4, 0,
+        // 顶面
+        3, 2, 2, 6, 6, 7, 7, 3,
+        // 四条立柱
+        0, 3, 1, 2, 5, 6, 4, 7
+    };
+
+    EmptyCube.SetVertices(Vertices);
+    EmptyCube.SetIndices(Indices);
+    EmptyCube.SetDrawMode(GL_LINES);
+
+    EmptyCube.UpdateBuffer();
 }

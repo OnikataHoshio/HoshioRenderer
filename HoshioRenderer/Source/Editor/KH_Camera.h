@@ -6,7 +6,9 @@ enum class CameraMovement
     Forward,
     Backward,
     Left,
-    Right
+    Right,
+    Up,
+    Down
 };
 
 class KH_Camera
@@ -31,6 +33,7 @@ public:
     // ²ÎÊý
     float MovementSpeed = 2.5f;
     float MouseSensitivity = 0.1f;
+    float SpeedSensitivity = 0.5f;
     float Zoom = 45.0f;
     float NearPlane = 0.1f;
     float FarPlane = 100.0f;
