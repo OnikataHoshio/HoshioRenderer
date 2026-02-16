@@ -9,8 +9,15 @@
 #include <cstdint>
 #include <fstream>
 #include <sstream>
-
 #include <algorithm>
+#include <omp.h>
+#include <random>
+#include <chrono>
+#include <format>
+#include <mutex>
+
+#include <sstream>
+#include <filesystem>
 
 // ================= OpenGL / Window =================
 #include <glad/glad.h>
@@ -24,8 +31,25 @@
 // ================= 辅助库 ==================
 #include "tiny_obj_loader.h"
 
-
 // ================= Macro ==================
-#define EPS 1e-6
+#define EPS 1e-8
+#define PI 3.1415926
+
+// ================ Template ================
+template <typename T>
+class KH_Singleton {
+public:
+    static T& Instance() {
+        static T instance;
+        return instance;
+    }
+
+    KH_Singleton(const KH_Singleton&) = delete;
+    KH_Singleton& operator=(const KH_Singleton&) = delete;
+
+protected:
+    KH_Singleton() = default;
+    virtual ~KH_Singleton() = default;
+};
 
 

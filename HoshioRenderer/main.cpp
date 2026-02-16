@@ -2,6 +2,8 @@
 #include "Pipeline/KH_Shader.h"
 #include "Object/KH_Object.h"
 #include "Hit/KH_BVH.h"
+#include "Renderer/KH_Renderer.h"
+#include "Utils/KH_DebugUtils.h"
 
 int main()
 {
@@ -16,24 +18,30 @@ int main()
 	KH_Model Bunny;
 	Bunny.LoadOBJ("Assert/Models/bunny.obj");
 
-	KH_BVH BVH(1, 8);
+	KH_BVH BVH(11, 1);
+	BVH.BuildMode = KH_BVH_BUILD_MODE::SAH;
+	//BVH.LoadObj("Assert/Models/cube.obj");
 	BVH.LoadObj("Assert/Models/bunny.obj");
 
-	while (!glfwWindowShouldClose(KH_Editor::Instance().GLFWwindow()))
-	{
-		KH_Editor::Instance().BeginRender();
+	KH_RendererBase BaseRenderer;
+	//BaseRenderer.TraversalMode = KH_PRIMITIVE_TRAVERSAL_MODE::BASE_BVH;
+	BaseRenderer.Render(BVH);
 
-		glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//while (!glfwWindowShouldClose(KH_Editor::Instance().GLFWwindow()))
+	//{
+	//	KH_Editor::Instance().BeginRender();
 
-		//KH_DefaultModels::Get().Cube.Render(TestShader);
-		//KH_DefaultModels::Get().EmptyCube.Render(TestShader);
-		Bunny.Render(TestShader);
-		BVH.RenderAABB(AABBShader, glm::vec3(1.0f, 1.0f, 1.0f));
+	//	glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
+	//	glClear(GL_COLOR_BUFFER_BIT);
+	//	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-		KH_Editor::Instance().EndRender();
-	}
+	//	//KH_DefaultModels::Get().Cube.Render(TestShader);
+	//	//KH_DefaultModels::Get().EmptyCube.Render(TestShader);
+	//	Bunny.Render(TestShader);
+	//	BVH.RenderAABB(AABBShader, glm::vec3(1.0f, 1.0f, 1.0f));
+
+	//	KH_Editor::Instance().EndRender();
+	//}
 
 	return 0;
 }

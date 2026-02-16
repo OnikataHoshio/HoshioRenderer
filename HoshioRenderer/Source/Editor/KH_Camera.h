@@ -1,6 +1,8 @@
 #pragma once
 #include "KH_Common.h"
 
+class KH_Ray;
+
 enum class CameraMovement
 {
     Forward,
@@ -26,6 +28,13 @@ public:
 
     glm::mat4 GetProjMatrix() const;
 
+
+    KH_Ray GetRay(int i, int j, int width, int height) const;
+
+    KH_Ray GetRay(int i, int j) const;
+
+    KH_Ray GetRay(float u, float v) const;
+
     void ProcessKeyboard(CameraMovement direction, float deltaTime);
     void ProcessMouseMovement(float xoffset, float yoffset, bool constrainPitch = true);
     void ProcessMouseScroll(float yoffset);
@@ -34,9 +43,10 @@ public:
     float MovementSpeed = 2.5f;
     float MouseSensitivity = 0.1f;
     float SpeedSensitivity = 0.5f;
-    float Zoom = 45.0f;
+    float Fovy = 45.0f;
     float NearPlane = 0.1f;
     float FarPlane = 100.0f;
+    float Aspect = 0.0f;
     uint32_t Width;
     uint32_t Height;
 
@@ -53,5 +63,7 @@ public:
 private:
     void UpdateCameraVectors();
 
+    glm::vec3 GetRayDirection(int i, int j, int width, int height) const;
 
+    glm::vec3 GetRayDirection(float u, float v) const;
 };

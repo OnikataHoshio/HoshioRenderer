@@ -1,9 +1,12 @@
 #include "KH_Camera.h"
+#include "Hit/KH_Ray.h"
+
+#include "Utils/KH_RandomUtils.h"
 
 KH_Camera::KH_Camera(uint32_t width, uint32_t height, glm::vec3 position, glm::vec3 up, float yaw, float pitch)
     :MovementSpeed(2.5f),
     MouseSensitivity(0.1f),
-    Zoom(45.0f),
+    Fovy(45.0f),
     Front(0.0f, 0.0f, -1.0f)
 {
     Width = width;
@@ -12,6 +15,7 @@ KH_Camera::KH_Camera(uint32_t width, uint32_t height, glm::vec3 position, glm::v
     WorldUp = up;
     Yaw = yaw;
     Pitch = pitch;
+    Aspect = static_cast<float>(Width) / static_cast<float>(Height);
 
     UpdateCameraVectors();
 }
@@ -23,9 +27,33 @@ glm::mat4 KH_Camera::GetViewMatrix() const
 
 glm::mat4 KH_Camera::GetProjMatrix() const
 {
-    float AspectRatio = static_cast<float>(Width) / static_cast<float>(Height);
-    return glm::perspective(glm::radians(Zoom), AspectRatio, NearPlane, FarPlane);
+    return glm::perspective(glm::radians(Fovy), Aspect, NearPlane, FarPlane);
 }
+
+KH_Ray KH_Camera::GetRay(int i, int j, int width, int height) const
+{
+    KH_Ray Ray;
+    Ray.Direction = GetRayDirection(i, j, width, height);
+    Ray.Start = Position;
+    return Ray;
+}
+
+KH_Ray KH_Camera::GetRay(int i, int j) const
+{
+    KH_Ray Ray;
+    Ray.Direction = GetRayDirection(i, j, Width, Height);
+    Ray.Start = Position;
+    return Ray;
+}
+
+KH_Ray KH_Camera::GetRay(float u, float v) const
+{
+    KH_Ray Ray;
+    Ray.Direction = GetRayDirection(u, v);
+    Ray.Start = Position;
+    return Ray;
+}
+
 
 void KH_Camera::ProcessKeyboard(CameraMovement direction, float deltaTime)
 {
@@ -86,4 +114,28 @@ void KH_Camera::UpdateCameraVectors()
     Right = glm::normalize(glm::cross(Front, WorldUp));
     Up = glm::normalize(glm::cross(Right, Front));
 }
+
+
+glm::vec3 KH_Camera::GetRayDirection(int i, int j, int Width, int Height) const
+{
+    float offsetU = KH_RandomUtils::Instance().RandomFloat();
+    float offsetV = KH_RandomUtils::Instance().RandomFloat();
+
+    float u = ((static_cast<float>(i) + offsetU) / Width) * 2.0f - 1.0f;
+    float v = 1.0f - ((static_cast<float>(j) + offsetV) / Height) * 2.0f;
+
+    return GetRayDirection(u, v);
+}
+
+glm::vec3 KH_Camera::GetRayDirection(float u, float v) const
+{
+    float scale = tan(glm::radians(Fovy) * 0.5f);
+
+    glm::vec3 DirWorldSpace = (u * Aspect * scale) * Right +
+        (v * scale) * Up +
+        Front;
+
+    return glm::normalize(DirWorldSpace);
+}
+
 
