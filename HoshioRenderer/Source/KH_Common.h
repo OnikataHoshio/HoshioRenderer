@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <set>
 #include <cmath>
 #include <functional>
 #include <cstdint>
@@ -22,14 +23,21 @@
 // ================= OpenGL / Window =================
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_opengl3.h"
 
 // ================= 数学库 =================
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "Eigen/StdList"
+#include "Eigen/StdVector"
+#include "Eigen/Sparse"
+
 // ================= 辅助库 ==================
-#include "tiny_obj_loader.h"
+#include "tiny_obj_loader/tiny_obj_loader.h"
 
 // ================= Macro ==================
 #define EPS 1e-8

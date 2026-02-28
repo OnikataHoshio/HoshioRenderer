@@ -1,7 +1,7 @@
 #include "KH_BVH.h"
 #include "KH_AABB.h"
 #include "Editor/KH_Editor.h"
-#include "Object/KH_Object.h"
+#include "Scene/KH_Object.h"
 #include "Pipeline/KH_Shader.h"
 
 #include "Utils/KH_DebugUtils.h"
@@ -197,12 +197,18 @@ KH_BVHSplitInfo KH_BVHNode::SelectSplitModeSAH(std::vector<KH_Triangle>& Triangl
 	return BVHSplitInfo;
 }
 
+KH_BVH::KH_BVH()
+{
+	Root = std::make_unique<KH_BVHNode>();
+}
+
 KH_BVH::KH_BVH(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles)
 	:MaxBVHDepth(MaxBVHDepth), MaxLeafTriangles(MaxLeafTriangles)
 {
 	Root = std::make_unique<KH_BVHNode>();
 }
 
+/*
 void KH_BVH::LoadObj(const std::string& path)
 {
 	tinyobj::ObjReader reader;
@@ -214,11 +220,11 @@ void KH_BVH::LoadObj(const std::string& path)
 	const auto& attrib = reader.GetAttrib();
 	const auto& shapes = reader.GetShapes();
 
-	Triangles.clear();
+	Triangles->clear();
 
 	size_t totalIndices = 0;
 	for (const auto& shape : shapes) totalIndices += shape.mesh.indices.size();
-	Triangles.reserve(totalIndices / 3);
+	Triangles->reserve(totalIndices / 3);
 
 	std::vector<glm::vec3> vertexNormals(attrib.vertices.size() / 3, glm::vec3(0.0f));
 
@@ -256,7 +262,7 @@ void KH_BVH::LoadObj(const std::string& path)
 				n[v] = glm::normalize(vertexNormals[idx[v].vertex_index]);
 			}
 
-			Triangles.emplace_back( p[0], p[1], p[2], n[0], n[1], n[2]);
+			Triangles->emplace_back( p[0], p[1], p[2], n[0], n[1], n[2]);
 			index_offset += 3;
 		}
 	}
@@ -269,6 +275,19 @@ void KH_BVH::LoadObj(const std::string& path)
 		Root->AABB.MaxPos.x, Root->AABB.MaxPos.y, Root->AABB.MaxPos.z);
 	LOG_D(DebugMessage);
 
+}
+*/
+
+void KH_BVH::BindAndBuild(std::vector<KH_Triangle>& Triangles)
+{
+	this->Triangles = &Triangles;
+	BuildBVH();
+	FillModelMatrices(MaxBVHDepth);
+
+	std::string DebugMessage = std::format("Model Range : [({},{},{}),({},{},{})]",
+		Root->AABB.MinPos.x, Root->AABB.MinPos.y, Root->AABB.MinPos.z,
+		Root->AABB.MaxPos.x, Root->AABB.MaxPos.y, Root->AABB.MaxPos.z);
+	LOG_D(DebugMessage);
 }
 
 void KH_BVH::RenderAABB(KH_Shader Shader, glm::vec3 Color)
@@ -303,6 +322,7 @@ std::vector<KH_BVHHitInfo> KH_BVH::Hit(KH_Ray& Ray)
 		Root->Hit(HitInfos, Ray);
 	return HitInfos;
 }
+
 
 void KH_BVH::FillModelMatrices(uint32_t TargetDepth)
 {
@@ -353,13 +373,21 @@ void KH_BVH::UpdateModelMatsSSBO()
 
 void KH_BVH::BuildBVH()
 {
+
+	if (Triangles == nullptr)
+	{
+		std::string DebugMessage = std::format("Pointer to triangle array is still empty!");
+		LOG_D(DebugMessage);
+		return;
+	}
+
 	switch (BuildMode)
 	{
 	case KH_BVH_BUILD_MODE::Base:
-		this->Root->BuildNode(Triangles, 0, Triangles.size(), 0, MaxLeafTriangles, MaxBVHDepth);
+		this->Root->BuildNode(*Triangles, 0, Triangles->size(), 0, MaxLeafTriangles, MaxBVHDepth);
 		break;
 	case KH_BVH_BUILD_MODE::SAH:
-		this->Root->BuildNodeSAH(Triangles, 0, Triangles.size(), 0, MaxLeafTriangles, MaxBVHDepth);
+		this->Root->BuildNodeSAH(*Triangles, 0, Triangles->size(), 0, MaxLeafTriangles, MaxBVHDepth);
 		break;
 	}
 }

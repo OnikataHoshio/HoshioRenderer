@@ -1,8 +1,8 @@
 #pragma once
 #include "KH_AABB.h"
-#include "Object/KH_Shape.h"
 
 class KH_Shader;
+class KH_Triangle;
 
 enum class KH_BVH_SPLIT_MODE
 {
@@ -31,6 +31,7 @@ struct KH_BVHSplitInfo
 	float Cost = std::numeric_limits<float>::max();
 	uint32_t SplitIndex = 0;
 };
+
 
 class KH_BVHNode
 {
@@ -62,9 +63,9 @@ class KH_BVH
 public:
 	std::unique_ptr<KH_BVHNode> Root;
 
-	std::vector<KH_Triangle> Triangles;
-	uint32_t MaxBVHDepth;
-	uint32_t MaxLeafTriangles;
+	std::vector<KH_Triangle>* Triangles = nullptr;
+	uint32_t MaxBVHDepth = 8;
+	uint32_t MaxLeafTriangles = 8;
 
 	std::vector<glm::mat4> ModelMats;
 	uint32_t MatCount = 0;
@@ -73,14 +74,18 @@ public:
 
 	unsigned int ModelMats_SSBO = 0;
 
+	KH_BVH();
 	KH_BVH(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles);
 	~KH_BVH() = default;
 
-	void LoadObj(const std::string& path);
+	//void LoadObj(const std::string& path);
+
+	void BindAndBuild(std::vector<KH_Triangle>& Triangles);
 
 	void RenderAABB(KH_Shader Shader, glm::vec3 Color);
 
 	std::vector<KH_BVHHitInfo> Hit(KH_Ray& Ray);
+
 
 private:
 	void FillModelMatrices(uint32_t TargetDepth);

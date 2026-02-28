@@ -1,5 +1,5 @@
 #include "KH_Renderer.h"
-#include "Object/KH_Shape.h"
+#include "Scene/KH_Shape.h"
 #include "Hit/KH_Ray.h"
 #include "Hit/KH_BVH.h"
 #include "Utils/KH_RandomUtils.h"
@@ -10,12 +10,13 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "Scene/KH_Scene.h"
 #include "stb_image/stb_image.h"
 #include "stb_image/stb_image_write.h"
 
 KH_BaseMaterial& Material = KH_DefaultMaterial::Instance().BaseMaterial1;
 
-void KH_RendererBase::Render(KH_BVH& BVH)
+void KH_RendererBase::Render(KH_Scene& Scene)
 {
 	const int Width = KH_Editor::Width;
 	const int Height = KH_Editor::Height;
@@ -42,7 +43,7 @@ void KH_RendererBase::Render(KH_BVH& BVH)
 
 			for (int k = 0; k < SAMPLE_COUNT; k++)
 			{
-				Color += PathTracing(BVH, Ray, 0);
+				Color += PathTracing(Scene, Ray, 0);
 			}
 
 			Color = float(SAMPLE_COUNT) * Color;
@@ -57,27 +58,27 @@ void KH_RendererBase::Render(KH_BVH& BVH)
 	SaveImage("output.png", Width, Height, Channel, PixelData.data());
 }
 
-KH_HitResult KH_RendererBase::CastRay(KH_BVH& BVH, KH_Ray& Ray)
+KH_HitResult KH_RendererBase::CastRay(KH_Scene& Scene, KH_Ray& Ray)
 {
 	KH_HitResult HitResult;
 	switch (TraversalMode)
 	{
 	case KH_PRIMITIVE_TRAVERSAL_MODE::BASE:
-		HitResult = CastRayBase(BVH, Ray);
+		HitResult = CastRayBase(Scene, Ray);
 		break;
 	case KH_PRIMITIVE_TRAVERSAL_MODE::BASE_BVH:
-		HitResult = CastRayBVH(BVH, Ray);
+		HitResult = CastRayBVH(Scene, Ray);
 		break;
 	}
 	return HitResult;
 }
 
-glm::vec3 KH_RendererBase::PathTracing(KH_BVH& BVH, KH_Ray& Ray, unsigned int Depth)
+glm::vec3 KH_RendererBase::PathTracing(KH_Scene& Scene, KH_Ray& Ray, unsigned int Depth)
 {
 	if (Depth > 8)
 		return glm::vec3(0.0f);
 
-	KH_HitResult HitResult = CastRay(BVH, Ray);
+	KH_HitResult HitResult = CastRay(Scene, Ray);
 
 	if (!HitResult.bIsHit)
 		return glm::vec3(0.0f);
@@ -104,7 +105,7 @@ glm::vec3 KH_RendererBase::PathTracing(KH_BVH& BVH, KH_Ray& Ray, unsigned int De
 	{
 		glm::vec3 ReflectDirection = glm::reflect(Ray.Direction, HitResult.Normal);
 		RandomRay.Direction = glm::mix(ReflectDirection, RandomRay.Direction, Material.ReflectRoughness);
-		Color = PathTracing(BVH, RandomRay, ++Depth) * cosine;
+		Color = PathTracing(Scene, RandomRay, ++Depth) * cosine;
 	}
 	else if (RandomValue < Material.RefractRate &&
 		RandomValue >= Material.SpecularRate)
@@ -132,21 +133,21 @@ glm::vec3 KH_RendererBase::PathTracing(KH_BVH& BVH, KH_Ray& Ray, unsigned int De
 		}
 
 		RandomRay.Start = HitResult.HitPoint - Normal * float(EPS * 100.0f);
-		Color = PathTracing(BVH , RandomRay, Depth + 1);
+		Color = PathTracing(Scene, RandomRay, Depth + 1);
 	}
 	else {
 		glm::vec3 MaterialColor = Material.Color;
-		glm::vec3 LightColor = PathTracing(BVH, RandomRay, ++Depth) * cosine;
+		glm::vec3 LightColor = PathTracing(Scene, RandomRay, ++Depth) * cosine;
 		Color = MaterialColor * LightColor;
 	}
 
 	return Color / float(P);
 }
 
-KH_HitResult KH_RendererBase::CastRayBase(KH_BVH& BVH, KH_Ray& Ray)
+KH_HitResult KH_RendererBase::CastRayBase(KH_Scene& Scene, KH_Ray& Ray)
 {
 	KH_HitResult HitResult, temp;
-	for (auto& Triangle : BVH.Triangles)
+	for (auto& Triangle : Scene.Triangles)
 	{
 		temp = Triangle.Hit(Ray);
 		if (temp.bIsHit && temp.Distance < HitResult.Distance)
@@ -155,16 +156,17 @@ KH_HitResult KH_RendererBase::CastRayBase(KH_BVH& BVH, KH_Ray& Ray)
 	return HitResult;
 }
 
-KH_HitResult KH_RendererBase::CastRayBVH(KH_BVH& BVH, KH_Ray& Ray)
+KH_HitResult KH_RendererBase::CastRayBVH(KH_Scene& Scene, KH_Ray& Ray)
 {
-	std::vector<KH_BVHHitInfo> BVHHitInfos = BVH.Hit(Ray);
+	std::vector<KH_BVHHitInfo> BVHHitInfos = Scene.BVH.Hit(Ray);
 	KH_HitResult HitResult, temp;
+
 
 	for (auto& BVHHitInfo : BVHHitInfos)
 	{
 		for (int i = BVHHitInfo.BeginIndex; i < BVHHitInfo.EndIndex; i++)
 		{
-			temp = BVH.Triangles[i].Hit(Ray);
+			temp = Scene.Triangles[i].Hit(Ray);
 			if (temp.bIsHit && temp.Distance < HitResult.Distance)
 				HitResult = temp;
 		}
