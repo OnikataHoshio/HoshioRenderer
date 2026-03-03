@@ -3,17 +3,17 @@
 #include "Utils/KH_DebugUtils.h"
 
 
-KH_RenderView::KH_RenderView()
+KH_Canvas::KH_Canvas()
     :Timer(3.0f)
 {
     Framebuffer.Create(64, 64);
 }
 
-void KH_RenderView::Render()
+void KH_Canvas::Render()
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 
-    ImGui::Begin("RenderView");
+    ImGui::Begin("Canvas");
     {
         ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
         uint32_t viewportWidth = static_cast<uint32_t>(viewportPanelSize.x);
@@ -139,7 +139,7 @@ void KH_GlobalInfo::Render()
 
         ImGui::Separator();
 
-        if (ImGui::CollapsingHeader("Renderer")) {
+        if (ImGui::CollapsingHeader("Renderer", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::BulletText("GPU: %s", glGetString(GL_RENDERER));
             //ImGui::BulletText("Draw Calls: %d", KH_Editor::DrawCallCount);
             //ImGui::BulletText("Vertices: %d k", KH_Editor::VertexCount / 1000);
@@ -147,7 +147,7 @@ void KH_GlobalInfo::Render()
 
         ImGui::Separator();
 
-        if (ImGui::CollapsingHeader("Environment")) {
+        if (ImGui::CollapsingHeader("Environment", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Text("  Canvas: %dx%d", KH_Editor::CanvasWidth, KH_Editor::CanvasHeight);
         }
 

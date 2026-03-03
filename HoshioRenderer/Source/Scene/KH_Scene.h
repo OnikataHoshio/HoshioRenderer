@@ -39,7 +39,9 @@ public:
 
 	std::vector<KH_Triangle> Triangles;
 	std::vector<KH_BSDFMaterial> Materials;
-	KH_BVH BVH;
+
+	KH_LBVH BVH;
+	// KH_BVH BVH;
 
 	void LoadObj(const std::string& path, uint32_t MaterialSlot);
 

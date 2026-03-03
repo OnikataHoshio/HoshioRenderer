@@ -32,12 +32,12 @@ struct KH_BVHSplitInfo
 	uint32_t SplitIndex = 0;
 };
 
-
-class KH_BVHNode
+#pragma region IBVH
+class KH_IBVHNode
 {
 public:
-	std::unique_ptr<KH_BVHNode> Left;
-	std::unique_ptr<KH_BVHNode> Right;
+	KH_IBVHNode() = default;
+	virtual ~KH_IBVHNode() = default;
 
 	bool bIsLeaf = false;
 	int Offset = 0;
@@ -45,23 +45,18 @@ public:
 
 	KH_AABB AABB;
 
-	void BuildNode(std::vector<KH_Triangle>& Triangles, uint32_t BeginIndex, uint32_t EndIndex, uint32_t Depth, uint32_t MaxNum, uint32_t MaxDepth);
-
-	void BuildNodeSAH(std::vector<KH_Triangle>& Triangles, uint32_t BeginIndex, uint32_t EndIndex, uint32_t Depth, uint32_t MaxNum, uint32_t MaxDepth);
-
-	void Hit(std::vector<KH_BVHHitInfo>& HitInfos, KH_Ray& Ray);
-
-private:
+protected:
 	static KH_BVH_SPLIT_MODE SelectSplitMode(KH_AABB& AABB);
 
 	static KH_BVHSplitInfo SelectSplitModeSAH(std::vector<KH_Triangle>& Triangles, int BeginIndex, int EndIndex);
 };
 
-
-class KH_BVH
+class KH_IBVH
 {
 public:
-	std::unique_ptr<KH_BVHNode> Root;
+	KH_IBVH() = default;
+	KH_IBVH(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles);
+	virtual ~KH_IBVH() = default;
 
 	std::vector<KH_Triangle>* Triangles = nullptr;
 	uint32_t MaxBVHDepth = 8;
@@ -74,26 +69,96 @@ public:
 
 	unsigned int ModelMats_SSBO = 0;
 
-	KH_BVH();
-	KH_BVH(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles);
-	~KH_BVH() = default;
-
-	//void LoadObj(const std::string& path);
-
-	void BindAndBuild(std::vector<KH_Triangle>& Triangles);
-
 	void RenderAABB(KH_Shader Shader, glm::vec3 Color);
 
-	std::vector<KH_BVHHitInfo> Hit(KH_Ray& Ray);
+	virtual void BindAndBuild(std::vector<KH_Triangle>& Triangles) = 0;
 
+	virtual std::vector<KH_BVHHitInfo> Hit(KH_Ray& Ray) = 0;
 
-private:
-	void FillModelMatrices(uint32_t TargetDepth);
-
-	void FillModelMatrices_Inner(KH_BVHNode* BVHNode, uint32_t CurrentDepth, uint32_t TargetDepth);
+protected:
+	virtual void FillModelMatrices(uint32_t TargetDepth) = 0;
 
 	void UpdateModelMatsSSBO();
 
-	void BuildBVH();
-
+	virtual void BuildBVH() = 0;
 };
+
+#pragma endregion
+
+#pragma region BVH
+
+class KH_BVHNode : public KH_IBVHNode
+{
+public:
+	std::unique_ptr<KH_BVHNode> Left;
+	std::unique_ptr<KH_BVHNode> Right;
+
+	void BuildNode(std::vector<KH_Triangle>& Triangles, uint32_t BeginIndex, uint32_t EndIndex, uint32_t Depth, uint32_t MaxNum, uint32_t MaxDepth);
+
+	void BuildNodeSAH(std::vector<KH_Triangle>& Triangles, uint32_t BeginIndex, uint32_t EndIndex, uint32_t Depth, uint32_t MaxNum, uint32_t MaxDepth);
+
+	void Hit(std::vector<KH_BVHHitInfo>& HitInfos, KH_Ray& Ray);
+};
+
+class KH_BVH : public KH_IBVH
+{
+public:
+	std::unique_ptr<KH_BVHNode> Root;
+
+	KH_BVH();
+	KH_BVH(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles);
+	~KH_BVH() override = default;
+
+	void BindAndBuild(std::vector<KH_Triangle>& Triangles) override;
+
+	std::vector<KH_BVHHitInfo> Hit(KH_Ray& Ray) override;
+
+private:
+	void FillModelMatrices(uint32_t TargetDepth) override;
+
+	void FillModelMatrices_Inner(KH_BVHNode* BVHNode, uint32_t CurrentDepth, uint32_t TargetDepth);
+
+	void BuildBVH() override;
+};
+
+#pragma endregion
+
+#pragma region LBVH
+
+class KH_LBVHNode : public KH_IBVHNode
+{
+public:
+	int Left, Right;
+
+	static int BuildNode(std::vector<KH_Triangle>& Triangles, std::vector<KH_LBVHNode>& LBVHNodes, uint32_t BeginIndex, uint32_t EndIndex, uint32_t Depth, uint32_t MaxNum, uint32_t MaxDepth);
+
+	static int BuildNodeSAH(std::vector<KH_Triangle>& Triangles, std::vector<KH_LBVHNode>& LBVHNodes, uint32_t BeginIndex, uint32_t EndIndex, uint32_t Depth, uint32_t MaxNum, uint32_t MaxDepth);
+
+	void Hit(std::vector<KH_BVHHitInfo>& HitInfos, std::vector<KH_LBVHNode>& LBVHNodes, KH_Ray& Ray);
+};
+
+#define KH_LBVH_NULL_NODE -1
+
+class KH_LBVH : public KH_IBVH
+{
+public:
+	int Root = KH_LBVH_NULL_NODE;
+	std::vector<KH_LBVHNode> LBVHNodes;
+
+	KH_LBVH() = default;
+	KH_LBVH(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles);
+	~KH_LBVH() override = default;
+
+	void BindAndBuild(std::vector<KH_Triangle>& Triangles) override;
+
+	std::vector<KH_BVHHitInfo> Hit(KH_Ray& Ray) override;
+
+private:
+	void FillModelMatrices(uint32_t TargetDepth) override;
+
+	void FillModelMatrices_Inner(int LBVHNodeID, uint32_t CurrentDepth, uint32_t TargetDepth);
+
+	void BuildBVH() override;
+};
+
+#pragma endregion

@@ -161,7 +161,6 @@ KH_HitResult KH_RendererBase::CastRayBVH(KH_Scene& Scene, KH_Ray& Ray)
 	std::vector<KH_BVHHitInfo> BVHHitInfos = Scene.BVH.Hit(Ray);
 	KH_HitResult HitResult, temp;
 
-
 	for (auto& BVHHitInfo : BVHHitInfos)
 	{
 		for (int i = BVHHitInfo.BeginIndex; i < BVHHitInfo.EndIndex; i++)

@@ -6,6 +6,132 @@
 
 #include "Utils/KH_DebugUtils.h"
 
+
+void KH_IBVH::RenderAABB(KH_Shader Shader, glm::vec3 Color)
+{
+	Shader.Use();
+	Shader.SetMat4("view", KH_Editor::Instance().Camera.GetViewMatrix());
+	Shader.SetMat4("projection", KH_Editor::Instance().Camera.GetProjMatrix());
+	Shader.SetVec3("Color", Color);
+
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+	glDisable(GL_CULL_FACE);
+
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ModelMats_SSBO);
+
+	glBindVertexArray(KH_DefaultModels::Get().EmptyCube.VAO);
+	glDrawElementsInstanced(
+		KH_DefaultModels::Get().EmptyCube.GetDrawMode(),
+		static_cast<GLsizei>(KH_DefaultModels::Get().Cube.GetIndicesSize()),
+		GL_UNSIGNED_INT,
+		0,
+		static_cast<GLsizei>(MatCount)
+	);
+	glBindVertexArray(0);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
+}
+
+void KH_IBVH::UpdateModelMatsSSBO()
+{
+	if (ModelMats_SSBO != 0)
+	{
+		glDeleteBuffers(1, &ModelMats_SSBO);
+	}
+
+	glGenBuffers(1, &ModelMats_SSBO);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ModelMats_SSBO);
+
+	glBufferData(GL_SHADER_STORAGE_BUFFER,
+		ModelMats.size() * sizeof(glm::mat4),
+		ModelMats.data(),
+		GL_STATIC_DRAW);
+
+	// glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ModelMats_SSBO);
+
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+}
+
+KH_BVH_SPLIT_MODE KH_IBVHNode::SelectSplitMode(KH_AABB& AABB)
+{
+	glm::vec3 Size = AABB.GetSize();
+	int axis = 0;
+	if (Size.y > Size[axis]) axis = 1;
+	if (Size.z > Size[axis]) axis = 2;
+
+	return static_cast<KH_BVH_SPLIT_MODE>(axis);
+}
+
+KH_BVHSplitInfo KH_IBVHNode::SelectSplitModeSAH(std::vector<KH_Triangle>& Triangles, int BeginIndex,
+	int EndIndex)
+{
+	int count = EndIndex - BeginIndex;
+	float MaxInf = std::numeric_limits<float>::max();
+
+	KH_BVHSplitInfo BVHSplitInfo;
+	BVHSplitInfo.Cost = std::numeric_limits<float>::max();
+
+	for (int axis = 0; axis < 3; axis++)
+	{
+		switch (axis) {
+		case 0:
+			std::sort(Triangles.begin() + BeginIndex, Triangles.begin() + EndIndex, KH_Triangle::Cmpx);
+			break;
+		case 1:
+			std::sort(Triangles.begin() + BeginIndex, Triangles.begin() + EndIndex, KH_Triangle::Cmpy);
+			break;
+		case 2:
+			std::sort(Triangles.begin() + BeginIndex, Triangles.begin() + EndIndex, KH_Triangle::Cmpz);
+			break;
+		default:
+			break;
+		}
+
+		std::vector<glm::vec3> LeftMin(count, glm::vec3(MaxInf));
+		std::vector<glm::vec3> LeftMax(count, glm::vec3(-MaxInf));
+		std::vector<glm::vec3> RightMin(count, glm::vec3(MaxInf));
+		std::vector<glm::vec3> RightMax(count, glm::vec3(-MaxInf));
+
+		LeftMin[0] = Triangles[BeginIndex].GetAABB().MinPos;
+		LeftMax[0] = Triangles[BeginIndex].GetAABB().MaxPos;
+		for (int i = BeginIndex + 1; i < EndIndex; i++) {
+			int index = i - BeginIndex;
+			LeftMin[index] = glm::min(LeftMin[index - 1], Triangles[i].GetAABB().MinPos);
+			LeftMax[index] = glm::max(LeftMax[index - 1], Triangles[i].GetAABB().MaxPos);
+		}
+
+		RightMin[count - 1] = Triangles[EndIndex - 1].GetAABB().MinPos;
+		RightMax[count - 1] = Triangles[EndIndex - 1].GetAABB().MaxPos;
+		for (int i = EndIndex - 2; i >= BeginIndex; i--) {
+			int index = i - BeginIndex;
+			RightMin[index] = glm::min(RightMin[index + 1], Triangles[i].GetAABB().MinPos);
+			RightMax[index] = glm::max(RightMax[index + 1], Triangles[i].GetAABB().MaxPos);
+		}
+
+
+		for (int i = BeginIndex + 1; i < EndIndex - 1; i++)
+		{
+			int LeftCost = KH_AABB::ComputeSurfaceArea(LeftMin[i], LeftMax[i]) * (i - BeginIndex);
+			int RightCost = KH_AABB::ComputeSurfaceArea(RightMin[i], RightMax[i]) * (EndIndex - i);
+			int TotalCost = LeftCost + RightCost;
+
+			if (TotalCost < BVHSplitInfo.Cost)
+			{
+				BVHSplitInfo.Cost = TotalCost;
+				BVHSplitInfo.SplitIndex = i;
+				BVHSplitInfo.SplitMode = static_cast<KH_BVH_SPLIT_MODE>(axis);
+			}
+		}
+	}
+
+	return BVHSplitInfo;
+}
+
+KH_IBVH::KH_IBVH(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles)
+	:MaxBVHDepth(MaxBVHDepth), MaxLeafTriangles(MaxLeafTriangles)
+{
+}
+
 void KH_BVHNode::BuildNode(std::vector<KH_Triangle>& Triangles, uint32_t BeginIndex, uint32_t EndIndex, uint32_t Depth, uint32_t MaxNum, uint32_t MaxDepth)
 {
 	int count = EndIndex - BeginIndex;
@@ -29,8 +155,6 @@ void KH_BVHNode::BuildNode(std::vector<KH_Triangle>& Triangles, uint32_t BeginIn
 		this->Right = nullptr;
 		return;
 	}
-
-
 
 	KH_BVH_SPLIT_MODE SplitMode = SelectSplitMode(AABB);
 	switch (SplitMode) {
@@ -122,165 +246,21 @@ void KH_BVHNode::Hit(std::vector<KH_BVHHitInfo>& HitInfos, KH_Ray& Ray)
 	if (Right) Right->Hit(HitInfos, Ray);
 }
 
-KH_BVH_SPLIT_MODE KH_BVHNode::SelectSplitMode(KH_AABB& AABB)
-{
-	glm::vec3 Size = AABB.GetSize();
-	int axis = 0; 
-	if (Size.y > Size[axis]) axis = 1; 
-	if (Size.z > Size[axis]) axis = 2; 
-
-	return static_cast<KH_BVH_SPLIT_MODE>(axis);
-}
-
-KH_BVHSplitInfo KH_BVHNode::SelectSplitModeSAH(std::vector<KH_Triangle>& Triangles, int BeginIndex,
-	int EndIndex)
-{
-	int count = EndIndex - BeginIndex;
-	float MaxInf = std::numeric_limits<float>::max();
-
-	KH_BVHSplitInfo BVHSplitInfo;
-	BVHSplitInfo.Cost = std::numeric_limits<float>::max();
-
-	for (int axis = 0; axis < 3; axis++)
-	{
-		switch (axis) {
-		case 0:
-			std::sort(Triangles.begin() + BeginIndex, Triangles.begin() + EndIndex, KH_Triangle::Cmpx);
-			break;
-		case 1:
-			std::sort(Triangles.begin() + BeginIndex, Triangles.begin() + EndIndex, KH_Triangle::Cmpy);
-			break;
-		case 2:
-			std::sort(Triangles.begin() + BeginIndex, Triangles.begin() + EndIndex, KH_Triangle::Cmpz);
-			break;
-		default:
-			break;
-		}
-
-		std::vector<glm::vec3> LeftMin(count, glm::vec3(MaxInf));
-		std::vector<glm::vec3> LeftMax(count, glm::vec3(-MaxInf));
-		std::vector<glm::vec3> RightMin(count, glm::vec3(MaxInf));
-		std::vector<glm::vec3> RightMax(count, glm::vec3(-MaxInf));
-
-		LeftMin[0] = Triangles[BeginIndex].GetAABB().MinPos;
-		LeftMax[0] = Triangles[BeginIndex].GetAABB().MaxPos;
-		for (int i = BeginIndex + 1; i < EndIndex; i++) {
-			int index = i - BeginIndex;
-			LeftMin[index] = glm::min(LeftMin[index - 1], Triangles[i].GetAABB().MinPos);
-			LeftMax[index] = glm::max(LeftMax[index - 1], Triangles[i].GetAABB().MaxPos);
-		}
-
-		RightMin[count - 1] = Triangles[EndIndex - 1].GetAABB().MinPos;
-		RightMax[count - 1] = Triangles[EndIndex - 1].GetAABB().MaxPos;
-		for (int i = EndIndex - 2; i >= BeginIndex; i--) {
-			int index = i - BeginIndex;
-			RightMin[index] = glm::min(RightMin[index + 1], Triangles[i].GetAABB().MinPos);
-			RightMax[index] = glm::max(RightMax[index + 1], Triangles[i].GetAABB().MaxPos);
-		}
-
-
-		for (int i = BeginIndex + 1; i < EndIndex - 1; i++)
-		{
-			int LeftCost = KH_AABB::ComputeSurfaceArea(LeftMin[i], LeftMax[i]) * (i - BeginIndex);
-			int RightCost = KH_AABB::ComputeSurfaceArea(RightMin[i], RightMax[i]) * (EndIndex - i);
-			int TotalCost = LeftCost + RightCost;
-
-			if (TotalCost < BVHSplitInfo.Cost)
-			{
-				BVHSplitInfo.Cost = TotalCost;
-				BVHSplitInfo.SplitIndex = i;
-				BVHSplitInfo.SplitMode = static_cast<KH_BVH_SPLIT_MODE>(axis);
-			}
-		}
-	}
-
-	return BVHSplitInfo;
-}
-
 KH_BVH::KH_BVH()
 {
 	Root = std::make_unique<KH_BVHNode>();
 }
 
 KH_BVH::KH_BVH(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles)
-	:MaxBVHDepth(MaxBVHDepth), MaxLeafTriangles(MaxLeafTriangles)
+	:KH_IBVH(MaxBVHDepth, MaxLeafTriangles)
 {
 	Root = std::make_unique<KH_BVHNode>();
 }
 
-/*
-void KH_BVH::LoadObj(const std::string& path)
-{
-	tinyobj::ObjReader reader;
-	if (!reader.ParseFromFile(path)) {
-		std::cerr << "TinyObjReader Error: " << reader.Error() << std::endl;
-		return;
-	}
-
-	const auto& attrib = reader.GetAttrib();
-	const auto& shapes = reader.GetShapes();
-
-	Triangles->clear();
-
-	size_t totalIndices = 0;
-	for (const auto& shape : shapes) totalIndices += shape.mesh.indices.size();
-	Triangles->reserve(totalIndices / 3);
-
-	std::vector<glm::vec3> vertexNormals(attrib.vertices.size() / 3, glm::vec3(0.0f));
-
-	for (const auto& shape : shapes) {
-		size_t index_offset = 0;
-		for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
-			tinyobj::index_t idx0 = shape.mesh.indices[index_offset + 0];
-			tinyobj::index_t idx1 = shape.mesh.indices[index_offset + 1];
-			tinyobj::index_t idx2 = shape.mesh.indices[index_offset + 2];
-
-			glm::vec3 p0(attrib.vertices[3 * idx0.vertex_index + 0], attrib.vertices[3 * idx0.vertex_index + 1], attrib.vertices[3 * idx0.vertex_index + 2]);
-			glm::vec3 p1(attrib.vertices[3 * idx1.vertex_index + 0], attrib.vertices[3 * idx1.vertex_index + 1], attrib.vertices[3 * idx1.vertex_index + 2]);
-			glm::vec3 p2(attrib.vertices[3 * idx2.vertex_index + 0], attrib.vertices[3 * idx2.vertex_index + 1], attrib.vertices[3 * idx2.vertex_index + 2]);
-
-			glm::vec3 faceNormal = glm::cross(p1 - p0, p2 - p0);
-
-			vertexNormals[idx0.vertex_index] += faceNormal;
-			vertexNormals[idx1.vertex_index] += faceNormal;
-			vertexNormals[idx2.vertex_index] += faceNormal;
-
-			index_offset += 3;
-		}
-	}
-
-	for (const auto& shape : shapes) {
-		size_t index_offset = 0;
-		for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
-			tinyobj::index_t idx[3];
-			glm::vec3 p[3], n[3];
-
-			for (size_t v = 0; v < 3; v++) {
-				idx[v] = shape.mesh.indices[index_offset + v];
-				p[v] = { attrib.vertices[3 * idx[v].vertex_index + 0], attrib.vertices[3 * idx[v].vertex_index + 1], attrib.vertices[3 * idx[v].vertex_index + 2] };
-
-				n[v] = glm::normalize(vertexNormals[idx[v].vertex_index]);
-			}
-
-			Triangles->emplace_back( p[0], p[1], p[2], n[0], n[1], n[2]);
-			index_offset += 3;
-		}
-	}
-
-	BuildBVH();
-	FillModelMatrices(MaxBVHDepth);
-
-	std::string DebugMessage = std::format("Model Range : [({},{},{}),({},{},{})]", 
-		Root->AABB.MinPos.x, Root->AABB.MinPos.y, Root->AABB.MinPos.z,
-		Root->AABB.MaxPos.x, Root->AABB.MaxPos.y, Root->AABB.MaxPos.z);
-	LOG_D(DebugMessage);
-
-}
-*/
-
 void KH_BVH::BindAndBuild(std::vector<KH_Triangle>& Triangles)
 {
 	this->Triangles = &Triangles;
+
 	BuildBVH();
 	FillModelMatrices(MaxBVHDepth);
 
@@ -290,30 +270,7 @@ void KH_BVH::BindAndBuild(std::vector<KH_Triangle>& Triangles)
 	LOG_D(DebugMessage);
 }
 
-void KH_BVH::RenderAABB(KH_Shader Shader, glm::vec3 Color)
-{
-	Shader.Use();
-	Shader.SetMat4("view", KH_Editor::Instance().Camera.GetViewMatrix());
-	Shader.SetMat4("projection", KH_Editor::Instance().Camera.GetProjMatrix());
-	Shader.SetVec3("Color", Color);
 
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-	glDisable(GL_CULL_FACE);
-
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ModelMats_SSBO);
-
-	glBindVertexArray(KH_DefaultModels::Get().EmptyCube.VAO);
-	glDrawElementsInstanced(
-		KH_DefaultModels::Get().EmptyCube.GetDrawMode(),
-		static_cast<GLsizei>(KH_DefaultModels::Get().Cube.GetIndicesSize()), 
-		GL_UNSIGNED_INT,
-		0,
-		static_cast<GLsizei>(MatCount) 
-	);
-	glBindVertexArray(0);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
-}
 
 std::vector<KH_BVHHitInfo> KH_BVH::Hit(KH_Ray& Ray)
 {
@@ -351,26 +308,6 @@ void KH_BVH::FillModelMatrices_Inner(KH_BVHNode* BVHNode, uint32_t CurrentDepth,
 	FillModelMatrices_Inner(BVHNode->Right.get(), CurrentDepth + 1, TargetDepth);
 }
 
-void KH_BVH::UpdateModelMatsSSBO()
-{
-	if (ModelMats_SSBO != 0)
-	{
-		glDeleteBuffers(1, &ModelMats_SSBO);
-	}
-
-	glGenBuffers(1, &ModelMats_SSBO);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ModelMats_SSBO);
-
-	glBufferData(GL_SHADER_STORAGE_BUFFER,
-		ModelMats.size() * sizeof(glm::mat4),
-		ModelMats.data(),
-		GL_STATIC_DRAW);
-
-	// glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ModelMats_SSBO);
-
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-}
-
 void KH_BVH::BuildBVH()
 {
 
@@ -388,6 +325,205 @@ void KH_BVH::BuildBVH()
 		break;
 	case KH_BVH_BUILD_MODE::SAH:
 		this->Root->BuildNodeSAH(*Triangles, 0, Triangles->size(), 0, MaxLeafTriangles, MaxBVHDepth);
+		break;
+	}
+}
+
+int KH_LBVHNode::BuildNode(std::vector<KH_Triangle>& Triangles, std::vector<KH_LBVHNode>& LBVHNodes,
+	uint32_t BeginIndex, uint32_t EndIndex, uint32_t Depth, uint32_t MaxNum, uint32_t MaxDepth)
+{
+	int count = EndIndex - BeginIndex;
+	if (count <= 0) return KH_LBVH_NULL_NODE;
+
+	LBVHNodes.push_back({});
+
+	int ID = LBVHNodes.size() - 1;
+
+	float MaxInf = std::numeric_limits<float>::max();
+	LBVHNodes[ID].AABB.MinPos = glm::vec3(MaxInf);
+	LBVHNodes[ID].AABB.MaxPos = glm::vec3(-MaxInf);
+
+	for (int i = BeginIndex; i < EndIndex; i++) {
+		LBVHNodes[ID].AABB.MinPos = glm::min(LBVHNodes[ID].AABB.MinPos, Triangles[i].GetAABB().MinPos - static_cast<float>(EPS));
+		LBVHNodes[ID].AABB.MaxPos = glm::max(LBVHNodes[ID].AABB.MaxPos, Triangles[i].GetAABB().MaxPos + static_cast<float>(EPS));
+	}
+
+	if (count <= MaxNum || Depth >= MaxDepth) {
+		LBVHNodes[ID].bIsLeaf = true;
+		LBVHNodes[ID].Offset = BeginIndex;
+		LBVHNodes[ID].Size = count;
+		LBVHNodes[ID].Left = KH_LBVH_NULL_NODE;
+		LBVHNodes[ID].Right = KH_LBVH_NULL_NODE;
+		return ID;
+	}
+
+	KH_BVH_SPLIT_MODE SplitMode = SelectSplitMode(LBVHNodes[ID].AABB);
+	switch (SplitMode) {
+	case KH_BVH_SPLIT_MODE::X_AXIS_SPLIT:
+		std::sort(Triangles.begin() + BeginIndex, Triangles.begin() + EndIndex, KH_Triangle::Cmpx);
+		break;
+	case KH_BVH_SPLIT_MODE::Y_AXIS_SPLIT:
+		std::sort(Triangles.begin() + BeginIndex, Triangles.begin() + EndIndex, KH_Triangle::Cmpy);
+		break;
+	case KH_BVH_SPLIT_MODE::Z_AXIS_SPLIT:
+		std::sort(Triangles.begin() + BeginIndex, Triangles.begin() + EndIndex, KH_Triangle::Cmpz);
+		break;
+	}
+
+	int MID = BeginIndex + count / 2;
+
+	LBVHNodes[ID].bIsLeaf = false;
+
+	LBVHNodes[ID].Left = BuildNode(Triangles, LBVHNodes, BeginIndex, MID, Depth + 1, MaxNum, MaxDepth);
+
+	LBVHNodes[ID].Right = BuildNode(Triangles, LBVHNodes, MID, EndIndex, Depth + 1, MaxNum, MaxDepth);
+
+	return ID;
+}
+
+int KH_LBVHNode::BuildNodeSAH(std::vector<KH_Triangle>& Triangles, std::vector<KH_LBVHNode>& LBVHNodes,
+	uint32_t BeginIndex, uint32_t EndIndex, uint32_t Depth, uint32_t MaxNum, uint32_t MaxDepth)
+{
+	int count = EndIndex - BeginIndex;
+	if (count <= 0) return KH_LBVH_NULL_NODE;
+
+	LBVHNodes.push_back({});
+	int ID = LBVHNodes.size() - 1;
+
+	float MaxInf = std::numeric_limits<float>::max();
+	LBVHNodes[ID].AABB.MinPos = glm::vec3(MaxInf);
+	LBVHNodes[ID].AABB.MaxPos = glm::vec3(-MaxInf);
+
+	for (int i = BeginIndex; i < EndIndex; i++) {
+		LBVHNodes[ID].AABB.MinPos = glm::min(LBVHNodes[ID].AABB.MinPos, Triangles[i].GetAABB().MinPos - static_cast<float>(EPS));
+		LBVHNodes[ID].AABB.MaxPos = glm::max(LBVHNodes[ID].AABB.MaxPos, Triangles[i].GetAABB().MaxPos + static_cast<float>(EPS));
+	}
+
+	if (count <= MaxNum || Depth >= MaxDepth) {
+		LBVHNodes[ID].bIsLeaf = true;
+		LBVHNodes[ID].Offset = BeginIndex;
+		LBVHNodes[ID].Size = count;
+		LBVHNodes[ID].Left = KH_LBVH_NULL_NODE;
+		LBVHNodes[ID].Right = KH_LBVH_NULL_NODE;
+		return ID;
+	}
+
+	KH_BVHSplitInfo SplitInfo = SelectSplitModeSAH(Triangles, BeginIndex, EndIndex);
+	switch (SplitInfo.SplitMode) {
+	case KH_BVH_SPLIT_MODE::X_AXIS_SPLIT:
+		std::sort(Triangles.begin() + BeginIndex, Triangles.begin() + EndIndex, KH_Triangle::Cmpx);
+		break;
+	case KH_BVH_SPLIT_MODE::Y_AXIS_SPLIT:
+		std::sort(Triangles.begin() + BeginIndex, Triangles.begin() + EndIndex, KH_Triangle::Cmpy);
+		break;
+	case KH_BVH_SPLIT_MODE::Z_AXIS_SPLIT:
+		std::sort(Triangles.begin() + BeginIndex, Triangles.begin() + EndIndex, KH_Triangle::Cmpz);
+		break;
+	}
+
+	LBVHNodes[ID].bIsLeaf = false;
+
+	LBVHNodes[ID].Left = BuildNode(Triangles, LBVHNodes, BeginIndex, SplitInfo.SplitIndex, Depth + 1, MaxNum, MaxDepth);
+
+	LBVHNodes[ID].Right = BuildNode(Triangles, LBVHNodes, SplitInfo.SplitIndex, EndIndex, Depth + 1, MaxNum, MaxDepth);
+
+	return ID;
+}
+
+void KH_LBVHNode::Hit(std::vector<KH_BVHHitInfo>& HitInfos, std::vector<KH_LBVHNode>& LBVHNodes, KH_Ray& Ray)
+{
+
+	KH_AABBHitInfo AABBHit = AABB.Hit(Ray);
+	if (!AABBHit.bIsHit) return;
+
+	if (bIsLeaf)
+	{
+		KH_BVHHitInfo BVHHitInfo;
+		BVHHitInfo.BeginIndex = Offset;
+		BVHHitInfo.EndIndex = Offset + Size;
+		BVHHitInfo.HitTime = AABBHit.HitTime;
+		BVHHitInfo.bIsHit = true;
+		HitInfos.push_back(BVHHitInfo);
+		return;
+	}
+
+	if (Left != KH_LBVH_NULL_NODE)  LBVHNodes[Left].Hit(HitInfos, LBVHNodes, Ray);
+	if (Right != KH_LBVH_NULL_NODE) LBVHNodes[Right].Hit(HitInfos, LBVHNodes, Ray);
+}
+
+
+KH_LBVH::KH_LBVH(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles)
+	:KH_IBVH(MaxBVHDepth, MaxLeafTriangles)
+{
+}
+
+void KH_LBVH::BindAndBuild(std::vector<KH_Triangle>& Triangles)
+{
+	this->Triangles = &Triangles;
+
+	Root = KH_LBVH_NULL_NODE;
+	LBVHNodes.clear();
+
+	BuildBVH();
+	FillModelMatrices(MaxBVHDepth);
+
+	std::string DebugMessage = std::format("Model Range : [({},{},{}),({},{},{})]",
+		LBVHNodes[Root].AABB.MinPos.x, LBVHNodes[Root].AABB.MinPos.y, LBVHNodes[Root].AABB.MinPos.z,
+		LBVHNodes[Root].AABB.MaxPos.x, LBVHNodes[Root].AABB.MaxPos.y, LBVHNodes[Root].AABB.MaxPos.z);
+	LOG_D(DebugMessage);
+}
+
+std::vector<KH_BVHHitInfo> KH_LBVH::Hit(KH_Ray& Ray)
+{
+	std::vector<KH_BVHHitInfo> HitInfos;
+	if (Root != KH_LBVH_NULL_NODE)
+		LBVHNodes[Root].Hit(HitInfos, LBVHNodes, Ray);
+	return HitInfos;
+}
+
+void KH_LBVH::FillModelMatrices(uint32_t TargetDepth)
+{
+	ModelMats.clear();
+	MatCount = 0;
+
+	FillModelMatrices_Inner(Root, 0, TargetDepth);
+
+	UpdateModelMatsSSBO();
+}
+
+void KH_LBVH::FillModelMatrices_Inner(int LBVHNodeID, uint32_t CurrentDepth, uint32_t TargetDepth)
+{
+	if (LBVHNodeID == KH_LBVH_NULL_NODE)
+		return;
+
+	if (CurrentDepth == TargetDepth || LBVHNodes[LBVHNodeID].bIsLeaf)
+	{
+		//TODO : Do some optimization
+		ModelMats.push_back(LBVHNodes[LBVHNodeID].AABB.GetModelMatrix());
+		MatCount += 1;
+		return;
+	}
+
+	FillModelMatrices_Inner(LBVHNodes[LBVHNodeID].Left, CurrentDepth + 1, TargetDepth);
+	FillModelMatrices_Inner(LBVHNodes[LBVHNodeID].Right, CurrentDepth + 1, TargetDepth);
+}
+
+void KH_LBVH::BuildBVH()
+{
+	if (Triangles == nullptr)
+	{
+		std::string DebugMessage = std::format("Pointer to triangle array is still empty!");
+		LOG_D(DebugMessage);
+		return;
+	}
+
+	switch (BuildMode)
+	{
+	case KH_BVH_BUILD_MODE::Base:
+		this->Root = KH_LBVHNode::BuildNode(*Triangles, LBVHNodes, 0, Triangles->size(), 0, MaxLeafTriangles, MaxBVHDepth);
+		break;
+	case KH_BVH_BUILD_MODE::SAH:
+		this->Root = KH_LBVHNode::BuildNodeSAH(*Triangles, LBVHNodes, 0, Triangles->size(), 0, MaxLeafTriangles, MaxBVHDepth);
 		break;
 	}
 }

@@ -86,7 +86,7 @@ void KH_Editor::RenderDockSpace()
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 
-    ImGui::Begin("MyRootDockSpace", nullptr, window_flags);
+    ImGui::Begin("RootDockSpace", nullptr, window_flags);
     ImGui::PopStyleVar(3);
 
     ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");

@@ -18,11 +18,11 @@ protected:
 };
 
 
-class KH_RenderView : public KH_Panel
+class KH_Canvas : public KH_Panel
 {
 public:
-	KH_RenderView();
-	virtual ~KH_RenderView() override = default;
+	KH_Canvas();
+	virtual ~KH_Canvas() override = default;
 
 	virtual void Render() override;
 

@@ -29,7 +29,7 @@ public:
     static std::string Title;
 
 private:
-    KH_RenderView RenderView;
+    KH_Canvas RenderView;
     KH_Console Console;
     KH_Setting Setting;
     KH_GlobalInfo GlobalInfo;
