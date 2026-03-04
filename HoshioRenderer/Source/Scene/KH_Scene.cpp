@@ -5,83 +5,89 @@
 
 #include "Utils/KH_DebugUtils.h"
 
-void KH_Scene::CreateSSBOs()
+void KH_Scene::SetSSBOs()
 {
-	DestroySSBOs();
-
 	static std::vector<KH_TriangleEncoded> TriangleEncodeds;
 	static std::vector<KH_BSDFMaterialEncoded> BSDFMaterialEncodeds;
+	static std::vector<KH_LBVHNodeEncoded> LBVHNodeEncodeds;
 
 	TriangleEncodeds.clear();
 	BSDFMaterialEncodeds.clear();
+	LBVHNodeEncodeds.clear();
 
 	TriangleEncodeds = EncodeTriangles();
 	BSDFMaterialEncodeds = EncodeBSDFMaterials();
+	LBVHNodeEncodeds = EncodeLBVHNodes();
 
 	std::string DebugMessage = std::format("KH_TriangleEncoded size : {} Byte", sizeof(KH_TriangleEncoded));
 	LOG_D(DebugMessage);
 	DebugMessage = std::format("KH_BSDFMaterialEncoded size : {} Byte", sizeof(KH_BSDFMaterialEncoded));
 	LOG_D(DebugMessage);
+	DebugMessage = std::format("KH_LBVHNodeEcoded size : {} Byte", sizeof(KH_LBVHNodeEncoded));
+	LOG_D(DebugMessage);
 
-
-	glGenBuffers(1, &TriangleSSBO);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, TriangleSSBO);
-
-	glBufferData(GL_SHADER_STORAGE_BUFFER,
-		TriangleEncodeds.size() * sizeof(KH_TriangleEncoded),
-		TriangleEncodeds.data(),
-		GL_STATIC_DRAW);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-
-	glGenBuffers(1, &MaterialSSBO);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, MaterialSSBO);
-
-	glBufferData(GL_SHADER_STORAGE_BUFFER,
-		BSDFMaterialEncodeds.size() * sizeof(KH_BSDFMaterialEncoded),
-		BSDFMaterialEncodeds.data(),
-		GL_STATIC_DRAW);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+	Triangle_SSBO.SetData(TriangleEncodeds);
+	Material_SSBO.SetData(BSDFMaterialEncodeds);
+	LBVHNode_SSBO.SetData(LBVHNodeEncodeds);
 }
 
-void KH_Scene::DestroySSBOs()
-{
-	if (TriangleSSBO)
-		glDeleteBuffers(1, &TriangleSSBO);
+//void KH_Scene::SetRayTracingV1() const
+//{
+//	const KH_Shader& Shader = KH_ExampleShaders::Instance().RayTracingShader1;
+//	const KH_Camera& Camera = KH_Editor::Instance().Camera;
+//
+//	Triangle_SSBO.Bind();
+//	Material_SSBO.Bind();
+//
+//
+//	Shader.SetInt("TriangleCount", Triangles.size());
+//	Shader.SetVec3("UCameraParam.Position", Camera.Position);
+//	Shader.SetVec3("UCameraParam.Right", Camera.Right);
+//	Shader.SetVec3("UCameraParam.Up", Camera.Up);
+//	Shader.SetVec3("UCameraParam.Front", Camera.Front);
+//	Shader.SetFloat("UCameraParam.Aspect", Camera.Aspect);
+//	Shader.SetFloat("UCameraParam.Fovy", Camera.Fovy);
+//}
 
-	if (MaterialSSBO)
-		glDeleteBuffers(1, &MaterialSSBO);
-}
-
-void KH_Scene::SetRTShaderV1() const
+void KH_Scene::SetRayTracingParam() const
 {
 	const KH_Shader& Shader = KH_ExampleShaders::Instance().RayTracingShader1;
 	const KH_Camera& Camera = KH_Editor::Instance().Camera;
 
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, TriangleSSBO);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, MaterialSSBO);
+	Triangle_SSBO.Bind();
+	Material_SSBO.Bind();
+	LBVHNode_SSBO.Bind();
 
 	Shader.SetInt("TriangleCount", Triangles.size());
+
+	Shader.SetInt("LBVHNodeCount", BVH.LBVHNodes.size());
+
 	Shader.SetVec3("UCameraParam.Position", Camera.Position);
 	Shader.SetVec3("UCameraParam.Right", Camera.Right);
 	Shader.SetVec3("UCameraParam.Up", Camera.Up);
 	Shader.SetVec3("UCameraParam.Front", Camera.Front);
 	Shader.SetFloat("UCameraParam.Aspect", Camera.Aspect);
 	Shader.SetFloat("UCameraParam.Fovy", Camera.Fovy);
+
+}
+
+KH_Scene::KH_Scene()
+{
+	Triangle_SSBO.SetBindPoint(0);
+	Material_SSBO.SetBindPoint(1);
+	LBVHNode_SSBO.SetBindPoint(2);
 }
 
 KH_Scene::KH_Scene(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles, KH_BVH_BUILD_MODE BuildMode)
 	:BVH(MaxBVHDepth, MaxLeafTriangles)
 {
 	BVH.BuildMode = BuildMode;
+	Triangle_SSBO.SetBindPoint(0);
+	Material_SSBO.SetBindPoint(1);
+	LBVHNode_SSBO.SetBindPoint(2);
 }
 
-KH_Scene::~KH_Scene()
-{
-	DestroySSBOs();
-}
-
-void KH_Scene::LoadObj(const std::string& path, uint32_t MaterialSlot)
+void KH_Scene::LoadObj(const std::string& path, float scale, int MaterialSlot)
 {
 	tinyobj::ObjReader reader;
 	if (!reader.ParseFromFile(path)) {
@@ -133,7 +139,7 @@ void KH_Scene::LoadObj(const std::string& path, uint32_t MaterialSlot)
 				n[v] = glm::normalize(vertexNormals[idx[v].vertex_index]);
 			}
 
-			Triangles.emplace_back(p[0], p[1], p[2], n[0], n[1], n[2], MaterialSlot);
+			Triangles.emplace_back(scale * p[0], scale * p[1], scale * p[2], n[0], n[1], n[2], MaterialSlot);
 			index_offset += 3;
 		}
 	}
@@ -144,7 +150,7 @@ void KH_Scene::BindAndBuild()
 {
 	BVH.BindAndBuild(Triangles);
 
-	CreateSSBOs();
+	SetSSBOs();
 }
 
 std::vector<KH_TriangleEncoded> KH_Scene::EncodeTriangles()
@@ -162,7 +168,7 @@ std::vector<KH_TriangleEncoded> KH_Scene::EncodeTriangles()
 		TriangleEncodeds[i].N2 = glm::vec4(Triangles[i].N2, 1.0);
 		TriangleEncodeds[i].N3 = glm::vec4(Triangles[i].N3, 1.0);
 
-		TriangleEncodeds[i].MaterialSlot = Triangles[i].MaterialSlot;
+		TriangleEncodeds[i].MaterialSlot = glm::ivec4(Triangles[i].MaterialSlot, 0.0, 0.0,0.0);
  	}
 
 	return TriangleEncodeds;
@@ -182,25 +188,45 @@ std::vector<KH_BSDFMaterialEncoded> KH_Scene::EncodeBSDFMaterials()
 		BSDFMaterialEncodeds[i].Param1 = glm::vec4(Mat.Subsurface, Mat.Metallic, Mat.Specular, Mat.SpecularTint);
 		BSDFMaterialEncodeds[i].Param2 = glm::vec4(Mat.Roughness, Mat.Anisotropic, Mat.Sheen, Mat.SheenTint);
 		BSDFMaterialEncodeds[i].Param3 = glm::vec4(Mat.Clearcoat, Mat.ClearcoatGloss, Mat.IOR, Mat.Transmission);
-
 	}
 
 	return BSDFMaterialEncodeds;
 }
 
+std::vector<KH_LBVHNodeEncoded> KH_Scene::EncodeLBVHNodes()
+{
+	const int nLBVHNodes = BVH.LBVHNodes.size();
+	std::vector<KH_LBVHNodeEncoded> LBVHNodeEncoded(nLBVHNodes);
+
+	for (int i = 0; i < nLBVHNodes; i++)
+	{
+		KH_LBVHNode& Node = BVH.LBVHNodes[i];
+
+		LBVHNodeEncoded[i].Param1 = glm::ivec4(Node.Left, Node.Right, 0.0, 0.0);
+		LBVHNodeEncoded[i].Param2 = glm::ivec4(Node.bIsLeaf ? 1 : 0, Node.Offset, Node.Size, 0);
+		LBVHNodeEncoded[i].AABB_MinPos = glm::vec4(Node.AABB.MinPos, 1.0);
+		LBVHNodeEncoded[i].AABB_MaxPos = glm::vec4(Node.AABB.MaxPos, 1.0);
+	}
+	return LBVHNodeEncoded;
+}
+
 void KH_Scene::Render()
 {
-	KH_Shader& Shader = KH_ExampleShaders::Instance().RayTracingShader1;
+	KH_Shader& Shader = KH_ExampleShaders::Instance().RayTracingShader4;
 	KH_Framebuffer& Framebuffer = KH_Editor::Instance().GetCanvasFramebuffer();
 
 	Framebuffer.Bind();
 
 	Shader.Use();
-	SetRTShaderV1();
+	SetRayTracingParam();
 
-	glBindVertexArray(KH_DefaultModels::Get().Plane.VAO);
-	glDrawElements(KH_DefaultModels::Get().Plane.GetDrawMode(), static_cast<GLsizei>(KH_DefaultModels::Get().Plane.GetIndicesSize()), GL_UNSIGNED_INT, 0);
+	glBindVertexArray(KH_DefaultModels::Instance().Plane.VAO);
+	glDrawElements(KH_DefaultModels::Instance().Plane.GetDrawMode(), static_cast<GLsizei>(KH_DefaultModels::Instance().Plane.GetIndicesSize()), GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
+
+	Triangle_SSBO.Unbind();
+	Material_SSBO.Unbind();
+	LBVHNode_SSBO.Unbind();
 
 	Framebuffer.Unbind();
 }
@@ -223,23 +249,37 @@ KH_ExampleScenes::KH_ExampleScenes()
 
 void KH_ExampleScenes::InitExampleScene1()
 {
-	ExampleScene1.BVH.MaxBVHDepth = 11;
+	ExampleScene1.BVH.MaxBVHDepth = 9;
 	ExampleScene1.BVH.MaxLeafTriangles = 1;
 
 	ExampleScene1.BVH.BuildMode = KH_BVH_BUILD_MODE::SAH;
 
-	KH_BSDFMaterial Material;
-	Material.BaseColor = glm::vec3(1.0, 0.0, 0.0);
+	KH_BSDFMaterial Material1;
+	Material1.BaseColor = glm::vec3(1.0, 0.0, 0.0);
 
-	ExampleScene1.Materials.push_back(Material);
+	KH_BSDFMaterial Material2;
+	Material2.BaseColor = glm::vec3(0.0, 1.0, 0.0);
 
-	ExampleScene1.LoadObj("Assert/Models/bunny.obj", 0);
+	glm::vec3 v0(-1.0f, 0.15f, -1.0f);
+	glm::vec3 v1( 1.0f, 0.15f, -1.0f);
+	glm::vec3 v2( 1.0f, 0.15f, 1.0f);
+	glm::vec3 v3(-1.0f, 0.15f, 1.0f);
+
+	KH_Triangle Triangle1(v0, v1, v2, 1);
+	KH_Triangle Triangle2(v0, v2, v3, 1);
+
+	ExampleScene1.Materials.push_back(Material1);
+	ExampleScene1.Materials.push_back(Material2);
+
+	ExampleScene1.LoadObj("Assert/Models/bunny.obj", 5.0, 0);
+	ExampleScene1.AddTriangles(Triangle1);
+	ExampleScene1.AddTriangles(Triangle2);
 	ExampleScene1.BindAndBuild();
 }
 
 void KH_ExampleScenes::InitSingleTriangle()
 {
-	SingleTriangle.BVH.MaxBVHDepth = 2;
+	SingleTriangle.BVH.MaxBVHDepth = 11;
 	SingleTriangle.BVH.MaxLeafTriangles = 1;
 
 	SingleTriangle.BVH.BuildMode = KH_BVH_BUILD_MODE::SAH;

@@ -23,6 +23,7 @@ public:
 	const KH_AABB& GetAABB() const;
 };
 
+#define KH_MATERIAL_UNDEFINED_SLOT -1
 
 struct KH_Triangle : public KH_IShape
 {
@@ -32,17 +33,17 @@ public:
 	glm::vec3 Center;
 	glm::vec3 Normal;
 
-	uint32_t MaterialSlot;
+	int MaterialSlot = KH_MATERIAL_UNDEFINED_SLOT;
 	
 	KH_Triangle();
 
 	KH_Triangle(glm::vec3 P1, glm::vec3 P2, glm::vec3 P3);
 
-	KH_Triangle(glm::vec3 P1, glm::vec3 P2, glm::vec3 P3, uint32_t MaterialSlot);
+	KH_Triangle(glm::vec3 P1, glm::vec3 P2, glm::vec3 P3, int MaterialSlot);
 
 	KH_Triangle(glm::vec3 P1, glm::vec3 P2, glm::vec3 P3, glm::vec3 N1, glm::vec3 N2, glm::vec3 N3);
 
-	KH_Triangle(glm::vec3 P1, glm::vec3 P2, glm::vec3 P3, glm::vec3 N1, glm::vec3 N2, glm::vec3 N3, uint32_t MaterialSlot);
+	KH_Triangle(glm::vec3 P1, glm::vec3 P2, glm::vec3 P3, glm::vec3 N1, glm::vec3 N2, glm::vec3 N3, int MaterialSlot);
 
 	KH_HitResult Hit(KH_Ray& Ray) override;
 

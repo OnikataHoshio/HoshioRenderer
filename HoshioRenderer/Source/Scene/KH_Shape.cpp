@@ -38,7 +38,7 @@ KH_Triangle::KH_Triangle(glm::vec3 P1, glm::vec3 P2, glm::vec3 P3)
     AABB.MaxPos = glm::max(P1, glm::max(P2, P3));
 }
 
-KH_Triangle::KH_Triangle(glm::vec3 P1, glm::vec3 P2, glm::vec3 P3, uint32_t MaterialSlot)
+KH_Triangle::KH_Triangle(glm::vec3 P1, glm::vec3 P2, glm::vec3 P3, int MaterialSlot)
     : P1(P1), P2(P2), P3(P3), MaterialSlot(MaterialSlot)
 {
     Center = (P1 + P2 + P3) / 3.0f;
@@ -68,7 +68,7 @@ KH_Triangle::KH_Triangle(glm::vec3 P1, glm::vec3 P2, glm::vec3 P3, glm::vec3 N1,
 }
 
 KH_Triangle::KH_Triangle(glm::vec3 P1, glm::vec3 P2, glm::vec3 P3, glm::vec3 N1, glm::vec3 N2, glm::vec3 N3,
-    uint32_t MaterialSlot)
+    int MaterialSlot)
 		:P1(P1), P2(P2), P3(P3), N1(N1), N2(N2), N3(N3), MaterialSlot(MaterialSlot)
 {
     Center = (P1 + P2 + P3) / 3.0f;

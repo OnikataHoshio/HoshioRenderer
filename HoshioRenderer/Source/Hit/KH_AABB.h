@@ -19,6 +19,8 @@ public:
 
 	bool CheckOverlap(KH_AABB& Other);
 
+	void Merge(const KH_AABB& Other);
+
 	glm::vec3 GetSize() const;
 
 	glm::vec3 GetCenter() const;

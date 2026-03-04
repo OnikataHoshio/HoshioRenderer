@@ -85,7 +85,8 @@ void KH_Shader::SetUint(const std::string& name, uint32_t value) const
 
 void KH_Shader::SetFloat(const std::string& name, float value) const
 {
-    glUniform1f(glGetUniformLocation(ID, name.c_str()), value);
+    unsigned int Location = glGetUniformLocation(ID, name.c_str());
+    glUniform1f(Location, value);
 }
 
 void KH_Shader::SetMat4(const std::string& name, const glm::mat4& mat) const
@@ -137,8 +138,14 @@ void KH_ExampleShaders::InitShaders()
     PrintShaderLoadMessage("AABBShader");
     TestCanvasShader.Create("Assert/Shaders/DefaultCanvas.vert", "Assert/Shaders/DefaultCanvas.frag");
     PrintShaderLoadMessage("TestCanvasShader");
-    RayTracingShader1.Create("Assert/Shaders/DefaultCanvas.vert", "Assert/Shaders/RayTracingVer1.frag");
-    PrintShaderLoadMessage("RTShader1");
+    RayTracingShader1.Create("Assert/Shaders/DefaultCanvas.vert", "Assert/Shaders/RayTracingV1.frag");
+    PrintShaderLoadMessage("RayTracingShaderV1");
+    RayTracingShader2.Create("Assert/Shaders/DefaultCanvas.vert", "Assert/Shaders/RayTracingV2.frag");
+    PrintShaderLoadMessage("RayTracingShaderV2");
+    RayTracingShader3.Create("Assert/Shaders/DefaultCanvas.vert", "Assert/Shaders/RayTracingV3.frag");
+    PrintShaderLoadMessage("RayTracingShaderV3");
+    RayTracingShader4.Create("Assert/Shaders/DefaultCanvas.vert", "Assert/Shaders/RayTracingV4.frag");
+    PrintShaderLoadMessage("RayTracingShaderV4");
 }
 
 void KH_ExampleShaders::PrintShaderLoadMessage(std::string ShaderName)

@@ -8,8 +8,7 @@ struct KH_TriangleEncoded
 {
 	glm::vec4 P1, P2, P3;
 	glm::vec4 N1, N2, N3;
-	uint32_t Padding[3];
-	uint32_t MaterialSlot = 0;
+	glm::ivec4 MaterialSlot;
 };
 
 struct KH_BSDFMaterialEncoded
@@ -21,29 +20,39 @@ struct KH_BSDFMaterialEncoded
 	glm::vec4 Param3;
 };
 
+
+struct KH_LBVHNodeEncoded
+{
+	glm::ivec4 Param1; //(Left, Right, )
+	glm::ivec4 Param2; //(bIsLeaf, Offset, Size)
+	glm::vec4 AABB_MinPos;
+	glm::vec4 AABB_MaxPos;
+};
+
 class KH_Scene
 {
 private:
-	void CreateSSBOs();
-	void DestroySSBOs();
+	void SetSSBOs();
 
-	GLuint TriangleSSBO = 0;
-	GLuint MaterialSSBO = 0;
+	KH_SSBO<KH_TriangleEncoded> Triangle_SSBO;
+	KH_SSBO<KH_BSDFMaterialEncoded> Material_SSBO;
+	KH_SSBO<KH_LBVHNodeEncoded> LBVHNode_SSBO;
 
-	void SetRTShaderV1() const;
+	void SetRayTracingParam() const;
 
 public:
-	KH_Scene() = default;
+	KH_Scene();
 	KH_Scene(uint32_t MaxBVHDepth, uint32_t MaxLeafTrianglesm, KH_BVH_BUILD_MODE BuildMode);
-	~KH_Scene();
+	~KH_Scene() = default;
 
+	std::vector<KH_Model> Models;
 	std::vector<KH_Triangle> Triangles;
 	std::vector<KH_BSDFMaterial> Materials;
 
 	KH_LBVH BVH;
-	// KH_BVH BVH;
+	//KH_BVH BVH;
 
-	void LoadObj(const std::string& path, uint32_t MaterialSlot);
+	void LoadObj(const std::string& path, float scale = 1.0, int MaterialSlot = KH_MATERIAL_UNDEFINED_SLOT);
 
 	void AddTriangles(KH_Triangle& Triangle);
 
@@ -52,6 +61,8 @@ public:
 	std::vector<KH_TriangleEncoded> EncodeTriangles();
 
 	std::vector<KH_BSDFMaterialEncoded> EncodeBSDFMaterials();
+
+	std::vector<KH_LBVHNodeEncoded> EncodeLBVHNodes();
 
 	void Render();
 

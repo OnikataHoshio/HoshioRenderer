@@ -38,4 +38,7 @@ public:
     KH_Shader AABBShader;
     KH_Shader TestCanvasShader;
     KH_Shader RayTracingShader1;
+    KH_Shader RayTracingShader2;
+    KH_Shader RayTracingShader3;
+    KH_Shader RayTracingShader4;
 };

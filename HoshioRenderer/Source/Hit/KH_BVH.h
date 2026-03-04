@@ -1,5 +1,6 @@
 #pragma once
 #include "KH_AABB.h"
+#include "Pipeline/KH_SSBO.h"
 
 class KH_Shader;
 struct KH_Triangle;
@@ -67,9 +68,11 @@ public:
 
 	KH_BVH_BUILD_MODE BuildMode = KH_BVH_BUILD_MODE::Base;
 
-	unsigned int ModelMats_SSBO = 0;
+	//unsigned int ModelMats_SSBO = 0;
+	KH_SSBO<glm::mat4> ModelMats_SSBO;
 
-	void RenderAABB(KH_Shader Shader, glm::vec3 Color);
+
+	void RenderAABB(KH_Shader& Shader, glm::vec3 Color);
 
 	virtual void BindAndBuild(std::vector<KH_Triangle>& Triangles) = 0;
 
@@ -150,8 +153,9 @@ public:
 	~KH_LBVH() override = default;
 
 	void BindAndBuild(std::vector<KH_Triangle>& Triangles) override;
-
 	std::vector<KH_BVHHitInfo> Hit(KH_Ray& Ray) override;
+
+	
 
 private:
 	void FillModelMatrices(uint32_t TargetDepth) override;

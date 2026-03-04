@@ -130,28 +130,45 @@ void KH_GlobalInfo::Render()
 
     {
         if (ImGui::CollapsingHeader("Performance", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Text("  FPS: %.1f", ImGui::GetIO().Framerate);
+            ImGui::Indent(20.0f);
+            ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
             ImGui::SameLine();
             ImGui::TextColored(ImVec4(0, 1, 0, 1), "(%.2f ms)", 1000.0f / ImGui::GetIO().Framerate);
 
-            // ImGui::Text("Memory: %.2f MB", GetMemoryUsage() / 1024.0f / 1024.0f);
+            static bool vsync = true;
+            if (ImGui::Checkbox("V-Sync", &vsync)) {
+                glfwSwapInterval(vsync ? 1 : 0);
+            }
+            ImGui::Unindent(20.0f);
         }
 
         ImGui::Separator();
 
         if (ImGui::CollapsingHeader("Renderer", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Indent(20.0f);
             ImGui::BulletText("GPU: %s", glGetString(GL_RENDERER));
-            //ImGui::BulletText("Draw Calls: %d", KH_Editor::DrawCallCount);
-            //ImGui::BulletText("Vertices: %d k", KH_Editor::VertexCount / 1000);
+            ImGui::Unindent(20.0f);
         }
 
         ImGui::Separator();
 
         if (ImGui::CollapsingHeader("Environment", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Text("  Canvas: %dx%d", KH_Editor::CanvasWidth, KH_Editor::CanvasHeight);
+            ImGui::Indent(20.0f);
+            ImGui::Text("Canvas: %dx%d", KH_Editor::CanvasWidth, KH_Editor::CanvasHeight);
+            ImGui::Unindent(20.0f);
         }
 
         ImGui::Separator();
+
+        if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Indent(20.0f);
+            ImGui::Text("Speed: %.2f", KH_Editor::Instance().Camera.MovementSpeed);
+            ImGui::Text("Fovy : %.2f", KH_Editor::Instance().Camera.Fovy);
+            ImGui::Unindent(20.0f);
+        }
+
+        ImGui::Separator();
+
     }
 
     bIsFocused = ImGui::IsWindowFocused();

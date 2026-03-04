@@ -102,3 +102,14 @@ bool KH_AABB::CheckOverlap(KH_AABB& Other)
 	return true;
 }
 
+void KH_AABB::Merge(const KH_AABB& Other)
+{
+	MinPos.x = std::min(MinPos.x, Other.MinPos.x);
+	MinPos.y = std::min(MinPos.y, Other.MinPos.y);
+	MinPos.z = std::min(MinPos.z, Other.MinPos.z);
+
+	MaxPos.x = std::max(MaxPos.x, Other.MaxPos.x);
+	MaxPos.y = std::max(MaxPos.y, Other.MaxPos.y);
+	MaxPos.z = std::max(MaxPos.z, Other.MaxPos.z);
+}
+

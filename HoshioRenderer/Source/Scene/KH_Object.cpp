@@ -85,6 +85,10 @@ void KH_Model::UpdateBuffer()
 
 void KH_Model::Render(KH_Shader& Shader)
 {
+    KH_Framebuffer& Framebuffer = KH_Editor::Instance().GetCanvasFramebuffer();
+
+    Framebuffer.Bind();
+
     Shader.Use();
     Shader.SetMat4("model", GetModelMatrix());
     Shader.SetMat4("view", KH_Editor::Instance().Camera.GetViewMatrix());
@@ -93,6 +97,8 @@ void KH_Model::Render(KH_Shader& Shader)
     glBindVertexArray(this->VAO);
     glDrawElements(DrawMode, static_cast<GLsizei>(Indices.size()), GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
+
+    Framebuffer.Unbind();
 }
 
 void KH_Model::Clear()
@@ -141,17 +147,13 @@ GLenum KH_Model::GetDrawMode() const
 }
 
 
-KH_DefaultModels& KH_DefaultModels::Get()
-{
-    static KH_DefaultModels DefaultModels;
-    return DefaultModels;
-}
 
 KH_DefaultModels::KH_DefaultModels()
 {
     InitCube();
     InitEmptyCube();
     InitPlane();
+    InitBunny();
 }
 
 void KH_DefaultModels::InitCube()
@@ -229,4 +231,9 @@ void KH_DefaultModels::InitPlane()
     Plane.UpdateBuffer();
 
     Plane.SetDrawMode(GL_TRIANGLES);
+}
+
+void KH_DefaultModels::InitBunny()
+{
+    Bunny.LoadOBJ("Assert/Models/bunny.obj");
 }

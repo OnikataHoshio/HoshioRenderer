@@ -15,29 +15,34 @@ int main()
 	KH_Editor::Title = "KH_Renderer";
 	KH_Editor::Instance();
 
-	KH_RendererBase BaseRenderer;
-	BaseRenderer.TraversalMode = KH_PRIMITIVE_TRAVERSAL_MODE::BASE_BVH;
-	BaseRenderer.Render(KH_ExampleScenes::Instance().ExampleScene1);
+	KH_Model& Bunny = KH_DefaultModels::Instance().Bunny;
+	KH_Scene& BunnyScene = KH_ExampleScenes::Instance().ExampleScene1;
+	KH_Shader& TestShader = KH_ExampleShaders::Instance().TestShader;
+	KH_Shader& AABBShader = KH_ExampleShaders::Instance().AABBShader;
 
-	//while (!glfwWindowShouldClose(KH_Editor::Instance().GLFWwindow()))
-	//{
-	//	KH_Editor::Instance().BeginRender();
+	//KH_RendererBase BaseRenderer;
+	//BaseRenderer.TraversalMode = KH_PRIMITIVE_TRAVERSAL_MODE::BASE_BVH;
+	//BaseRenderer.Render(KH_ExampleScenes::Instance().ExampleScene1);
 
-	//	glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
-	//	glClear(GL_COLOR_BUFFER_BIT);
-	//	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	KH_Framebuffer& Framebuffer = KH_Editor::Instance().GetCanvasFramebuffer();
 
-	//	//KH_DefaultModels::Get().Cube.Render(TestShader);
-	//	//KH_DefaultModels::Get().EmptyCube.Render(TestShader);
-	//	//KH_DefaultModels::Get().Plane.Render(TestShader);
+	while (!glfwWindowShouldClose(KH_Editor::Instance().GLFWwindow()))
+	{
+		KH_Editor::Instance().BeginRender();
 
-	//	//Bunny.Render(TestShader);
-	//	//KH_ExampleScene::Instance().ExampleScene1.BVH.RenderAABB(AABBShader, glm::vec3(1.0f, 1.0f, 1.0f));
+		Framebuffer.Bind();
+		glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		Framebuffer.Unbind();
 
-	//	KH_ExampleScenes::Instance().ExampleScene1.Render();
+		//Bunny.Render(TestShader);
+		//BunnyScene.BVH.RenderAABB(AABBShader, glm::vec3(1.0f, 1.0f, 1.0f));
 
-	//	KH_Editor::Instance().EndRender();
-	//}
+		BunnyScene.Render();
+
+		KH_Editor::Instance().EndRender();
+	}
 
 	return 0;
 }

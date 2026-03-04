@@ -59,27 +59,29 @@ private:
 	GLenum DrawMode = GL_TRIANGLES;
 };
 
-class KH_DefaultModels
+class KH_DefaultModels : public KH_Singleton<KH_DefaultModels>
 {
+	friend class KH_Singleton<KH_DefaultModels>;
 public:
 	KH_Model Cube;
 	KH_Model EmptyCube;
 	KH_Model Plane;
+	KH_Model Bunny;
 
 	KH_DefaultModels(const KH_DefaultModels&) = delete;
 	KH_DefaultModels& operator=(const KH_DefaultModels&) = delete;
 
-	static KH_DefaultModels& Get();
-
 private:
 	KH_DefaultModels();
-	~KH_DefaultModels() = default;
+	~KH_DefaultModels() override = default;
 
 	void InitCube();
 
 	void InitEmptyCube();
 
 	void InitPlane();
+
+	void InitBunny();
 };
 
 

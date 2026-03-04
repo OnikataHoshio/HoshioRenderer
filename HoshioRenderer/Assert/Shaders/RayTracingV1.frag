@@ -16,7 +16,7 @@ struct CameraParam
 struct Triangle{
     vec4 P1, P2, P3;
     vec4 N1, N2, N3;
-    uint MaterialSlot;
+    ivec4 MaterialSlot;
 };
 
 struct BSDFMaterial{
@@ -51,7 +51,7 @@ struct HitResult {
 	float Distance;
 	vec3 HitPoint;
 	vec3 Normal;
-    uint MaterialSlot;
+    int MaterialSlot;
 };
 
 #define INF             114514.0
@@ -68,12 +68,12 @@ vec3 GetRayDirection(float u, float v)
     return normalize(DirWorldSpace);
 }
 
-HitResult HitTriangle(uint triangle_index, Ray ray)
+HitResult HitTriangle(int triangle_index, Ray ray)
 {
     HitResult hit_result;
     hit_result.bIsHit = false;    
     hit_result.Distance = INF;
-    hit_result.MaterialSlot = 0; 
+    hit_result.MaterialSlot = -1; 
 
     Triangle triangle = Triangles[triangle_index];
 
@@ -100,7 +100,7 @@ HitResult HitTriangle(uint triangle_index, Ray ray)
     hit_result.bIsHit = true;
     hit_result.Distance = t;
     hit_result.HitPoint = ray.Start + t * ray.Direction;
-    hit_result.MaterialSlot = triangle.MaterialSlot;
+    hit_result.MaterialSlot = triangle.MaterialSlot.x;
 
     float w1 = 1.0 - u - v;
     hit_result.Normal = normalize(vec3((w1 * triangle.N1 + u * triangle.N2 + v * triangle.N3)));
@@ -113,7 +113,7 @@ HitResult Hit(Ray ray, int l, int r)
     HitResult hit_result;
     hit_result.bIsHit = false;    
     hit_result.Distance = INF;
-    hit_result.MaterialSlot = 0; 
+    hit_result.MaterialSlot = -1; 
 
 	for (int i = l; i < r; i++)
 	{

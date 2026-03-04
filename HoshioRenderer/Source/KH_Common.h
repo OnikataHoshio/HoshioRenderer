@@ -40,7 +40,7 @@
 #include "tiny_obj_loader/tiny_obj_loader.h"
 
 // ================= Macro ==================
-#define EPS 1e-8
+#define EPS 1e-6
 #define PI 3.1415926
 
 // ================ Template ================

@@ -16,7 +16,7 @@ struct CameraParam
 struct Triangle{
     vec4 P1, P2, P3;
     vec4 N1, N2, N3;
-    uint MaterialSlot;
+    ivec4 MaterialSlot;
 };
 
 struct BSDFMaterial{
@@ -27,6 +27,14 @@ struct BSDFMaterial{
     vec4 Param3;
 };
 
+struct LBVHNode{
+    ivec4 Param1;
+    ivec4 Param2;
+    vec4 AABB_MinPos;
+    vec4 AABB_MaxPos;
+};
+
+
 layout(std430, binding = 0) buffer TriangleSSBO {
     Triangle Triangles[];
 };
@@ -35,9 +43,15 @@ layout(std430, binding = 1) buffer BRDFMaterialSSBO{
     BSDFMaterial Materials[];
 };
 
+layout(std430, binding = 2) buffer LBVHNodeSSBO{
+    LBVHNode LBVHNodes[];
+};
+
 uniform CameraParam UCameraParam;
 
 uniform int TriangleCount;
+
+uniform int LBVHNodeCount;
 
 struct Ray
 {
@@ -51,7 +65,7 @@ struct HitResult {
 	float Distance;
 	vec3 HitPoint;
 	vec3 Normal;
-    uint MaterialSlot;
+    int MaterialSlot;
 };
 
 #define INF             114514.0
@@ -68,12 +82,12 @@ vec3 GetRayDirection(float u, float v)
     return normalize(DirWorldSpace);
 }
 
-HitResult HitTriangle(uint triangle_index, Ray ray)
+HitResult HitTriangle(int triangle_index, Ray ray)
 {
     HitResult hit_result;
     hit_result.bIsHit = false;    
     hit_result.Distance = INF;
-    hit_result.MaterialSlot = 0; 
+    hit_result.MaterialSlot = -1; 
 
     Triangle triangle = Triangles[triangle_index];
 
@@ -100,7 +114,7 @@ HitResult HitTriangle(uint triangle_index, Ray ray)
     hit_result.bIsHit = true;
     hit_result.Distance = t;
     hit_result.HitPoint = ray.Start + t * ray.Direction;
-    hit_result.MaterialSlot = triangle.MaterialSlot;
+    hit_result.MaterialSlot = triangle.MaterialSlot.x;
 
     float w1 = 1.0 - u - v;
     hit_result.Normal = normalize(vec3((w1 * triangle.N1 + u * triangle.N2 + v * triangle.N3)));
@@ -113,7 +127,7 @@ HitResult Hit(Ray ray, int l, int r)
     HitResult hit_result;
     hit_result.bIsHit = false;    
     hit_result.Distance = INF;
-    hit_result.MaterialSlot = 0; 
+    hit_result.MaterialSlot = -1; 
 
 	for (int i = l; i < r; i++)
 	{
@@ -124,6 +138,57 @@ HitResult Hit(Ray ray, int l, int r)
     return hit_result;
 }
 
+
+HitResult HitBVH(Ray ray)
+{
+    HitResult hit_result;
+    hit_result.bIsHit = false;    
+    hit_result.Distance = INF;
+    hit_result.MaterialSlot = -1; 
+
+    for(int i = 0; i < LBVHNodeCount; i++)
+    {
+        ivec4 Param2 = LBVHNodes[i].Param2;
+        int isLeaf = Param2.x;
+        if(isLeaf != 0)
+        {
+            int offset = Param2.y;
+            int size = Param2.z;
+
+            HitResult temp = Hit(ray, offset , offset+size); 
+            if (temp.bIsHit && temp.Distance < hit_result.Distance)
+			    hit_result = temp;
+        }
+    }
+
+    return hit_result;
+}
+
+
+float HitAABB(int node_index, Ray ray)
+{
+    LBVHNode Node = LBVHNodes[node_index];
+    
+    vec3 invDir = 1.0 / ray.Direction;
+    
+    vec3 t0s = (vec3(Node.AABB_MinPos) - ray.Start) * invDir;
+    vec3 t1s = (vec3(Node.AABB_MaxPos) - ray.Start) * invDir;
+    
+    vec3 tmin = min(t0s, t1s);
+    vec3 tmax = max(t0s, t1s);
+    
+    float t_start = max(tmin.x, max(tmin.y, tmin.z));
+    float t_end = min(tmax.x, min(tmax.y, tmax.z));
+    
+    if (t_start <= t_end && t_end > 0.0)
+    {
+        return t_start > 0.0 ? t_start : t_end; 
+    }
+
+    return -1.0;
+}
+
+
 void main()
 {
     float u = CanvasPos.x;
@@ -132,7 +197,7 @@ void main()
     ray.Start = UCameraParam.Position;
     ray.Direction = GetRayDirection(u, v);
 
-    HitResult hit_result = Hit(ray, 0, TriangleCount);
+    HitResult hit_result = HitBVH(ray);
 
     if(hit_result.bIsHit)
     {
@@ -143,4 +208,12 @@ void main()
         FragColor = vec4(0.0, 0.0, 0.0, 1.0);
     }
 
+    LBVHNode Node = LBVHNodes[0];
+    int left = Node.Param1.x;
+    int right = Node.Param1.y;
+
+    FragColor = vec4(HitAABB(left, ray),HitAABB(right, ray),0.0, 1.0);
 }
+
+
+
