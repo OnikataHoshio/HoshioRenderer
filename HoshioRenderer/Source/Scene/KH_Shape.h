@@ -25,7 +25,7 @@ public:
 
 #define KH_MATERIAL_UNDEFINED_SLOT -1
 
-struct KH_Triangle : public KH_IShape
+class KH_Triangle : public KH_IShape
 {
 public:
 	glm::vec3 P1, P2, P3;
@@ -47,11 +47,16 @@ public:
 
 	KH_HitResult Hit(KH_Ray& Ray) override;
 
+	glm::vec3 GetMinPos() const;
+
+	glm::vec3 GetMaxPos() const;
+
 	static bool Cmpx(const KH_Triangle& t1, const KH_Triangle& t2);
 
 	static bool Cmpy(const KH_Triangle& t1, const KH_Triangle& t2);
 
 	static bool Cmpz(const KH_Triangle& t1, const KH_Triangle& t2);
+
 
 private:
 	KH_TriangleHitInfo CheckHitInfo(glm::vec3 HitPoint);

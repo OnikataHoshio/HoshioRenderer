@@ -9,7 +9,7 @@ void KH_Scene::SetSSBOs()
 {
 	static std::vector<KH_TriangleEncoded> TriangleEncodeds;
 	static std::vector<KH_BRDFMaterialEncoded> BSDFMaterialEncodeds;
-	static std::vector<KH_LBVHNodeEncoded> LBVHNodeEncodeds;
+	static std::vector<KH_FlatBVHNodeEncoded> LBVHNodeEncodeds;
 
 	TriangleEncodeds.clear();
 	BSDFMaterialEncodeds.clear();
@@ -23,7 +23,7 @@ void KH_Scene::SetSSBOs()
 	LOG_D(DebugMessage);
 	DebugMessage = std::format("KH_BSDFMaterialEncoded size : {} Byte", sizeof(KH_BRDFMaterialEncoded));
 	LOG_D(DebugMessage);
-	DebugMessage = std::format("KH_LBVHNodeEcoded size : {} Byte", sizeof(KH_LBVHNodeEncoded));
+	DebugMessage = std::format("KH_LBVHNodeEcoded size : {} Byte", sizeof(KH_FlatBVHNodeEncoded));
 	LOG_D(DebugMessage);
 
 	Triangle_SSBO.SetData(TriangleEncodeds);
@@ -60,7 +60,7 @@ void KH_Scene::SetRayTracingParam() const
 
 	Shader.SetInt("TriangleCount", Triangles.size());
 
-	Shader.SetInt("LBVHNodeCount", BVH.LBVHNodes.size());
+	Shader.SetInt("LBVHNodeCount", BVH.BVHNodes.size());
 
 	Shader.SetVec3("UCameraParam.Position", Camera.Position);
 	Shader.SetVec3("UCameraParam.Right", Camera.Right);
@@ -140,6 +140,9 @@ void KH_Scene::LoadObj(const std::string& path, float scale, int MaterialSlot)
 			}
 
 			Triangles.emplace_back(scale * p[0], scale * p[1], scale * p[2], n[0], n[1], n[2], MaterialSlot);
+
+			AABB.Merge(Triangles.back());
+
 			index_offset += 3;
 		}
 	}
@@ -193,14 +196,14 @@ std::vector<KH_BRDFMaterialEncoded> KH_Scene::EncodeBSDFMaterials()
 	return BSDFMaterialEncodeds;
 }
 
-std::vector<KH_LBVHNodeEncoded> KH_Scene::EncodeLBVHNodes()
+std::vector<KH_FlatBVHNodeEncoded> KH_Scene::EncodeLBVHNodes()
 {
-	const int nLBVHNodes = BVH.LBVHNodes.size();
-	std::vector<KH_LBVHNodeEncoded> LBVHNodeEncoded(nLBVHNodes);
+	const int nLBVHNodes = BVH.BVHNodes.size();
+	std::vector<KH_FlatBVHNodeEncoded> LBVHNodeEncoded(nLBVHNodes);
 
 	for (int i = 0; i < nLBVHNodes; i++)
 	{
-		KH_LBVHNode& Node = BVH.LBVHNodes[i];
+		KH_FlatBVHNode& Node = BVH.BVHNodes[i];
 
 		LBVHNodeEncoded[i].Param1 = glm::ivec4(Node.Left, Node.Right, 0.0, 0.0);
 		LBVHNodeEncoded[i].Param2 = glm::ivec4(Node.bIsLeaf ? 1 : 0, Node.Offset, Node.Size, 0);
@@ -234,6 +237,7 @@ void KH_Scene::Render()
 void KH_Scene::AddTriangles(KH_Triangle& Triangle)
 {
 	Triangles.emplace_back(Triangle);
+	AABB.Merge(Triangles.back());
 }
 
 void KH_Scene::Clear()

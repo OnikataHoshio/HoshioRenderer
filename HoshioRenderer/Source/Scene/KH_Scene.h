@@ -21,7 +21,7 @@ struct KH_BRDFMaterialEncoded
 };
 
 
-struct KH_LBVHNodeEncoded
+struct KH_FlatBVHNodeEncoded
 {
 	glm::ivec4 Param1; //(Left, Right, )
 	glm::ivec4 Param2; //(bIsLeaf, Offset, Size)
@@ -36,7 +36,7 @@ private:
 
 	KH_SSBO<KH_TriangleEncoded> Triangle_SSBO;
 	KH_SSBO<KH_BRDFMaterialEncoded> Material_SSBO;
-	KH_SSBO<KH_LBVHNodeEncoded> LBVHNode_SSBO;
+	KH_SSBO<KH_FlatBVHNodeEncoded> LBVHNode_SSBO;
 
 	void SetRayTracingParam() const;
 
@@ -49,7 +49,10 @@ public:
 	std::vector<KH_Triangle> Triangles;
 	std::vector<KH_BRDFMaterial> Materials;
 
-	KH_LBVH BVH;
+	KH_FlatBVH BVH;
+
+	KH_AABB AABB;
+
 	//KH_BVH BVH;
 
 	void LoadObj(const std::string& path, float scale = 1.0, int MaterialSlot = KH_MATERIAL_UNDEFINED_SLOT);
@@ -62,7 +65,7 @@ public:
 
 	std::vector<KH_BRDFMaterialEncoded> EncodeBSDFMaterials();
 
-	std::vector<KH_LBVHNodeEncoded> EncodeLBVHNodes();
+	std::vector<KH_FlatBVHNodeEncoded> EncodeLBVHNodes();
 
 	void Render();
 

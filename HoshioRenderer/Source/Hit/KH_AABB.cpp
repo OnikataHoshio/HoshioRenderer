@@ -2,11 +2,15 @@
 
 #include "KH_Ray.h"
 
+#include "Scene/KH_Shape.h"
+
 KH_AABB::KH_AABB(glm::vec3 MinPos, glm::vec3 MaxPos)
 	:MinPos(MinPos), MaxPos(MaxPos)
 {
 
 }
+
+
 
 glm::vec3 KH_AABB::GetSize() const
 {
@@ -104,12 +108,39 @@ bool KH_AABB::CheckOverlap(KH_AABB& Other)
 
 void KH_AABB::Merge(const KH_AABB& Other)
 {
-	MinPos.x = std::min(MinPos.x, Other.MinPos.x);
-	MinPos.y = std::min(MinPos.y, Other.MinPos.y);
-	MinPos.z = std::min(MinPos.z, Other.MinPos.z);
+	//MinPos.x = std::min(MinPos.x, Other.MinPos.x);
+	//MinPos.y = std::min(MinPos.y, Other.MinPos.y);
+	//MinPos.z = std::min(MinPos.z, Other.MinPos.z);
 
-	MaxPos.x = std::max(MaxPos.x, Other.MaxPos.x);
-	MaxPos.y = std::max(MaxPos.y, Other.MaxPos.y);
-	MaxPos.z = std::max(MaxPos.z, Other.MaxPos.z);
+	//MaxPos.x = std::max(MaxPos.x, Other.MaxPos.x);
+	//MaxPos.y = std::max(MaxPos.y, Other.MaxPos.y);
+	//MaxPos.z = std::max(MaxPos.z, Other.MaxPos.z);
+
+	MinPos = glm::min(MinPos, Other.MinPos);
+	MaxPos = glm::max(MaxPos, Other.MaxPos);
+
+}
+
+void KH_AABB::Merge(const glm::vec3& OtherMinPos, const glm::vec3& OtherMaxPos)
+{
+	MinPos = glm::min(MinPos, OtherMinPos);
+	MaxPos = glm::max(MaxPos, OtherMaxPos);
+}
+
+void KH_AABB::Merge(const KH_Triangle& Triangle)
+{
+	MinPos = glm::min(MinPos, Triangle.GetMinPos());
+	MaxPos = glm::max(MaxPos, Triangle.GetMaxPos());
+}
+
+void KH_AABB::Update(const KH_Triangle& Triangle)
+{
+	MinPos = Triangle.GetMinPos();
+	MaxPos = Triangle.GetMaxPos();
+}
+
+bool KH_AABB::IsInvalid() const
+{
+	return glm::any(glm::greaterThan(MinPos, MaxPos));
 }
 

@@ -1,34 +1,12 @@
 #include "Editor/KH_Editor.h"
-//#include "Pipeline/KH_Shader.h"
-//#include "Scene/KH_Object.h"
-//#include "Hit/KH_BVH.h"
-//#include "Renderer/KH_Renderer.h"
-//#include "Scene/KH_Scene.h"
-//#include "Utils/KH_DebugUtils.h"
-
-#include "Utils/KH_GPUAlgorithms.h"
-
-int main()
-{
-	KH_Editor::EditorWidth = 1280;
-	KH_Editor::EditorHeight = 920;
-	KH_Editor::Title = "KH_Renderer";
-	KH_Editor::Instance();
-
-	std::vector<int> Data(6400000, 0);
-
-	for (int i = 0; i < 6400000; i++)
-		Data[i] = 6400000 - i;
-
-	KH_RadixSort RadixSort;
-
-	RadixSort.RunRadixSort(Data.data(), Data.size());
-
-	return 0;
-}
+#include "Pipeline/KH_Shader.h"
+#include "Scene/KH_Object.h"
+#include "Hit/KH_LBVH.h"
+#include "Renderer/KH_Renderer.h"
+#include "Scene/KH_Scene.h"
+#include "Utils/KH_DebugUtils.h"
 
 
-/*
 int main()
 {
 	KH_Editor::EditorWidth = 1280;
@@ -37,6 +15,7 @@ int main()
 	KH_Editor::Instance();
 
 	KH_Model& Bunny = KH_DefaultModels::Instance().Bunny;
+	KH_Model& MortonCurve = KH_DefaultModels::Instance().MortonCurve;
 	KH_Scene& BunnyScene = KH_ExampleScenes::Instance().ExampleScene1;
 	KH_Shader& TestShader = KH_ExampleShaders::Instance().TestShader;
 	KH_Shader& AABBShader = KH_ExampleShaders::Instance().AABBShader;
@@ -58,13 +37,13 @@ int main()
 		Framebuffer.Unbind();
 
 		//Bunny.Render(TestShader);
+		MortonCurve.Render(TestShader);
 		//BunnyScene.BVH.RenderAABB(AABBShader, glm::vec3(1.0f, 1.0f, 1.0f));
 
-		BunnyScene.Render();
+		//BunnyScene.Render();
 
 		KH_Editor::Instance().EndRender();
 	}
 
 	return 0;
 }
-*/

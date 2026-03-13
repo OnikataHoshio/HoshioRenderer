@@ -304,38 +304,38 @@ void KH_BVH::BuildBVH()
 	}
 }
 
-int KH_LBVHNode::BuildNode(std::vector<KH_Triangle>& Triangles, std::vector<KH_LBVHNode>& LBVHNodes,
+int KH_FlatBVHNode::BuildNode(std::vector<KH_Triangle>& Triangles, std::vector<KH_FlatBVHNode>& FlatBVHNodes,
 	uint32_t BeginIndex, uint32_t EndIndex, uint32_t Depth, uint32_t MaxNum, uint32_t MaxDepth)
 {
 	int count = EndIndex - BeginIndex;
-	if (count <= 0) return KH_LBVH_NULL_NODE;
+	if (count <= 0) return KH_FLAT_BVH_NULL_NODE;
 
-	LBVHNodes.push_back({});
+	FlatBVHNodes.push_back({});
 
-	int ID = LBVHNodes.size() - 1;
+	int ID = FlatBVHNodes.size() - 1;
 
 	float MaxInf = std::numeric_limits<float>::max();
-	LBVHNodes[ID].AABB.MinPos = glm::vec3(MaxInf);
-	LBVHNodes[ID].AABB.MaxPos = glm::vec3(-MaxInf);
+	FlatBVHNodes[ID].AABB.MinPos = glm::vec3(MaxInf);
+	FlatBVHNodes[ID].AABB.MaxPos = glm::vec3(-MaxInf);
 
 	for (int i = BeginIndex; i < EndIndex; i++) {
-		LBVHNodes[ID].AABB.MinPos = glm::min(LBVHNodes[ID].AABB.MinPos, Triangles[i].GetAABB().MinPos);
-		LBVHNodes[ID].AABB.MaxPos = glm::max(LBVHNodes[ID].AABB.MaxPos, Triangles[i].GetAABB().MaxPos);
+		FlatBVHNodes[ID].AABB.MinPos = glm::min(FlatBVHNodes[ID].AABB.MinPos, Triangles[i].GetAABB().MinPos);
+		FlatBVHNodes[ID].AABB.MaxPos = glm::max(FlatBVHNodes[ID].AABB.MaxPos, Triangles[i].GetAABB().MaxPos);
 	}
 
-	LBVHNodes[ID].AABB.MinPos -= static_cast<float>(EPS);
-	LBVHNodes[ID].AABB.MaxPos += static_cast<float>(EPS);
+	FlatBVHNodes[ID].AABB.MinPos -= static_cast<float>(EPS);
+	FlatBVHNodes[ID].AABB.MaxPos += static_cast<float>(EPS);
 
 	if (count <= MaxNum || Depth >= MaxDepth) {
-		LBVHNodes[ID].bIsLeaf = true;
-		LBVHNodes[ID].Offset = BeginIndex;
-		LBVHNodes[ID].Size = count;
-		LBVHNodes[ID].Left = KH_LBVH_NULL_NODE;
-		LBVHNodes[ID].Right = KH_LBVH_NULL_NODE;
+		FlatBVHNodes[ID].bIsLeaf = true;
+		FlatBVHNodes[ID].Offset = BeginIndex;
+		FlatBVHNodes[ID].Size = count;
+		FlatBVHNodes[ID].Left = KH_FLAT_BVH_NULL_NODE;
+		FlatBVHNodes[ID].Right = KH_FLAT_BVH_NULL_NODE;
 		return ID;
 	}
 
-	KH_BVH_SPLIT_MODE SplitMode = SelectSplitMode(LBVHNodes[ID].AABB);
+	KH_BVH_SPLIT_MODE SplitMode = SelectSplitMode(FlatBVHNodes[ID].AABB);
 	switch (SplitMode) {
 	case KH_BVH_SPLIT_MODE::X_AXIS_SPLIT:
 		std::sort(Triangles.begin() + BeginIndex, Triangles.begin() + EndIndex, KH_Triangle::Cmpx);
@@ -350,44 +350,44 @@ int KH_LBVHNode::BuildNode(std::vector<KH_Triangle>& Triangles, std::vector<KH_L
 
 	int MID = BeginIndex + count / 2;
 
-	LBVHNodes[ID].bIsLeaf = false;
+	FlatBVHNodes[ID].bIsLeaf = false;
 
-	int leftID = BuildNode(Triangles, LBVHNodes, BeginIndex, MID, Depth + 1, MaxNum, MaxDepth);
-	LBVHNodes[ID].Left = leftID;
+	int leftID = BuildNode(Triangles, FlatBVHNodes, BeginIndex, MID, Depth + 1, MaxNum, MaxDepth);
+	FlatBVHNodes[ID].Left = leftID;
 
-	int rightID = BuildNode(Triangles, LBVHNodes, MID, EndIndex, Depth + 1, MaxNum, MaxDepth);
-	LBVHNodes[ID].Right = rightID;
+	int rightID = BuildNode(Triangles, FlatBVHNodes, MID, EndIndex, Depth + 1, MaxNum, MaxDepth);
+	FlatBVHNodes[ID].Right = rightID;
 
 	return ID;
 }
 
-int KH_LBVHNode::BuildNodeSAH(std::vector<KH_Triangle>& Triangles, std::vector<KH_LBVHNode>& LBVHNodes,
+int KH_FlatBVHNode::BuildNodeSAH(std::vector<KH_Triangle>& Triangles, std::vector<KH_FlatBVHNode>& FlatBVHNodes,
 	uint32_t BeginIndex, uint32_t EndIndex, uint32_t Depth, uint32_t MaxNum, uint32_t MaxDepth)
 {
 	int count = EndIndex - BeginIndex;
-	if (count <= 0) return KH_LBVH_NULL_NODE;
+	if (count <= 0) return KH_FLAT_BVH_NULL_NODE;
 
-	LBVHNodes.push_back({});
-	int ID = LBVHNodes.size() - 1;
+	FlatBVHNodes.push_back({});
+	int ID = FlatBVHNodes.size() - 1;
 
 	float MaxInf = std::numeric_limits<float>::max();
-	LBVHNodes[ID].AABB.MinPos = glm::vec3(MaxInf);
-	LBVHNodes[ID].AABB.MaxPos = glm::vec3(-MaxInf);
+	FlatBVHNodes[ID].AABB.MinPos = glm::vec3(MaxInf);
+	FlatBVHNodes[ID].AABB.MaxPos = glm::vec3(-MaxInf);
 
 	for (int i = BeginIndex; i < EndIndex; i++) {
-		LBVHNodes[ID].AABB.MinPos = glm::min(LBVHNodes[ID].AABB.MinPos, Triangles[i].GetAABB().MinPos);
-		LBVHNodes[ID].AABB.MaxPos = glm::max(LBVHNodes[ID].AABB.MaxPos, Triangles[i].GetAABB().MaxPos);
+		FlatBVHNodes[ID].AABB.MinPos = glm::min(FlatBVHNodes[ID].AABB.MinPos, Triangles[i].GetAABB().MinPos);
+		FlatBVHNodes[ID].AABB.MaxPos = glm::max(FlatBVHNodes[ID].AABB.MaxPos, Triangles[i].GetAABB().MaxPos);
 	}
 
-	LBVHNodes[ID].AABB.MinPos -= static_cast<float>(EPS);
-	LBVHNodes[ID].AABB.MaxPos += static_cast<float>(EPS);
+	FlatBVHNodes[ID].AABB.MinPos -= static_cast<float>(EPS);
+	FlatBVHNodes[ID].AABB.MaxPos += static_cast<float>(EPS);
 
 	if (count <= MaxNum || Depth >= MaxDepth) {
-		LBVHNodes[ID].bIsLeaf = true;
-		LBVHNodes[ID].Offset = BeginIndex;
-		LBVHNodes[ID].Size = count;
-		LBVHNodes[ID].Left = KH_LBVH_NULL_NODE;
-		LBVHNodes[ID].Right = KH_LBVH_NULL_NODE;
+		FlatBVHNodes[ID].bIsLeaf = true;
+		FlatBVHNodes[ID].Offset = BeginIndex;
+		FlatBVHNodes[ID].Size = count;
+		FlatBVHNodes[ID].Left = KH_FLAT_BVH_NULL_NODE;
+		FlatBVHNodes[ID].Right = KH_FLAT_BVH_NULL_NODE;
 		return ID;
 	}
 
@@ -404,19 +404,18 @@ int KH_LBVHNode::BuildNodeSAH(std::vector<KH_Triangle>& Triangles, std::vector<K
 		break;
 	}
 
-	LBVHNodes[ID].bIsLeaf = false;
+	FlatBVHNodes[ID].bIsLeaf = false;
 
-	int leftID = BuildNodeSAH(Triangles, LBVHNodes, BeginIndex, SplitInfo.SplitIndex, Depth + 1, MaxNum, MaxDepth);
-	LBVHNodes[ID].Left = leftID;
+	int leftID = BuildNodeSAH(Triangles, FlatBVHNodes, BeginIndex, SplitInfo.SplitIndex, Depth + 1, MaxNum, MaxDepth);
+	FlatBVHNodes[ID].Left = leftID;
 
-	int rightID = BuildNodeSAH(Triangles, LBVHNodes, SplitInfo.SplitIndex, EndIndex, Depth + 1, MaxNum, MaxDepth);
-	LBVHNodes[ID].Right = rightID;
+	int rightID = BuildNodeSAH(Triangles, FlatBVHNodes, SplitInfo.SplitIndex, EndIndex, Depth + 1, MaxNum, MaxDepth);
+	FlatBVHNodes[ID].Right = rightID;
 	return ID;
 }
 
-void KH_LBVHNode::Hit(std::vector<KH_BVHHitInfo>& HitInfos, std::vector<KH_LBVHNode>& LBVHNodes, KH_Ray& Ray)
+void KH_FlatBVHNode::Hit(std::vector<KH_BVHHitInfo>& HitInfos, std::vector<KH_FlatBVHNode>& FlatBVHNodes, KH_Ray& Ray)
 {
-
 	KH_AABBHitInfo AABBHit = AABB.Hit(Ray);
 	if (!AABBHit.bIsHit) return;
 
@@ -431,41 +430,41 @@ void KH_LBVHNode::Hit(std::vector<KH_BVHHitInfo>& HitInfos, std::vector<KH_LBVHN
 		return;
 	}
 
-	if (Left != KH_LBVH_NULL_NODE)  LBVHNodes[Left].Hit(HitInfos, LBVHNodes, Ray);
-	if (Right != KH_LBVH_NULL_NODE) LBVHNodes[Right].Hit(HitInfos, LBVHNodes, Ray);
+	if (Left != KH_FLAT_BVH_NULL_NODE)  FlatBVHNodes[Left].Hit(HitInfos, FlatBVHNodes, Ray);
+	if (Right != KH_FLAT_BVH_NULL_NODE) FlatBVHNodes[Right].Hit(HitInfos, FlatBVHNodes, Ray);
 }
 
 
-KH_LBVH::KH_LBVH(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles)
+KH_FlatBVH::KH_FlatBVH(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles)
 	:KH_IBVH(MaxBVHDepth, MaxLeafTriangles)
 {
 }
 
-void KH_LBVH::BindAndBuild(std::vector<KH_Triangle>& Triangles)
+void KH_FlatBVH::BindAndBuild(std::vector<KH_Triangle>& Triangles)
 {
 	this->Triangles = &Triangles;
 
-	Root = KH_LBVH_NULL_NODE;
-	LBVHNodes.clear();
+	Root = KH_FLAT_BVH_NULL_NODE;
+	BVHNodes.clear();
 
 	BuildBVH();
 	FillModelMatrices(MaxBVHDepth);
 
 	std::string DebugMessage = std::format("Model Range : [({},{},{}),({},{},{})]",
-		LBVHNodes[Root].AABB.MinPos.x, LBVHNodes[Root].AABB.MinPos.y, LBVHNodes[Root].AABB.MinPos.z,
-		LBVHNodes[Root].AABB.MaxPos.x, LBVHNodes[Root].AABB.MaxPos.y, LBVHNodes[Root].AABB.MaxPos.z);
+		BVHNodes[Root].AABB.MinPos.x, BVHNodes[Root].AABB.MinPos.y, BVHNodes[Root].AABB.MinPos.z,
+		BVHNodes[Root].AABB.MaxPos.x, BVHNodes[Root].AABB.MaxPos.y, BVHNodes[Root].AABB.MaxPos.z);
 	LOG_D(DebugMessage);
 }
 
-std::vector<KH_BVHHitInfo> KH_LBVH::Hit(KH_Ray& Ray)
+std::vector<KH_BVHHitInfo> KH_FlatBVH::Hit(KH_Ray& Ray)
 {
 	std::vector<KH_BVHHitInfo> HitInfos;
-	if (Root != KH_LBVH_NULL_NODE)
-		LBVHNodes[Root].Hit(HitInfos, LBVHNodes, Ray);
+	if (Root != KH_FLAT_BVH_NULL_NODE)
+		BVHNodes[Root].Hit(HitInfos, BVHNodes, Ray);
 	return HitInfos;
 }
 
-void KH_LBVH::FillModelMatrices(uint32_t TargetDepth)
+void KH_FlatBVH::FillModelMatrices(uint32_t TargetDepth)
 {
 	ModelMats.clear();
 	MatCount = 0;
@@ -475,24 +474,24 @@ void KH_LBVH::FillModelMatrices(uint32_t TargetDepth)
 	UpdateModelMatsSSBO();
 }
 
-void KH_LBVH::FillModelMatrices_Inner(int LBVHNodeID, uint32_t CurrentDepth, uint32_t TargetDepth)
+void KH_FlatBVH::FillModelMatrices_Inner(int FlatBVHNodeID, uint32_t CurrentDepth, uint32_t TargetDepth)
 {
-	if (LBVHNodeID == KH_LBVH_NULL_NODE)
+	if (FlatBVHNodeID == KH_FLAT_BVH_NULL_NODE)
 		return;
 
-	if (CurrentDepth == TargetDepth || LBVHNodes[LBVHNodeID].bIsLeaf)
+	if (CurrentDepth == TargetDepth || BVHNodes[FlatBVHNodeID].bIsLeaf)
 	{
 		//TODO : Do some optimization
-		ModelMats.push_back(LBVHNodes[LBVHNodeID].AABB.GetModelMatrix());
+		ModelMats.push_back(BVHNodes[FlatBVHNodeID].AABB.GetModelMatrix());
 		MatCount += 1;
 		return;
 	}
 
-	FillModelMatrices_Inner(LBVHNodes[LBVHNodeID].Left, CurrentDepth + 1, TargetDepth);
-	FillModelMatrices_Inner(LBVHNodes[LBVHNodeID].Right, CurrentDepth + 1, TargetDepth);
+	FillModelMatrices_Inner(BVHNodes[FlatBVHNodeID].Left, CurrentDepth + 1, TargetDepth);
+	FillModelMatrices_Inner(BVHNodes[FlatBVHNodeID].Right, CurrentDepth + 1, TargetDepth);
 }
 
-void KH_LBVH::BuildBVH()
+void KH_FlatBVH::BuildBVH()
 {
 	if (Triangles == nullptr)
 	{
@@ -504,10 +503,10 @@ void KH_LBVH::BuildBVH()
 	switch (BuildMode)
 	{
 	case KH_BVH_BUILD_MODE::Base:
-		this->Root = KH_LBVHNode::BuildNode(*Triangles, LBVHNodes, 0, Triangles->size(), 0, MaxLeafTriangles, MaxBVHDepth);
+		this->Root = KH_FlatBVHNode::BuildNode(*Triangles, BVHNodes, 0, Triangles->size(), 0, MaxLeafTriangles, MaxBVHDepth);
 		break;
 	case KH_BVH_BUILD_MODE::SAH:
-		this->Root = KH_LBVHNode::BuildNodeSAH(*Triangles, LBVHNodes, 0, Triangles->size(), 0, MaxLeafTriangles, MaxBVHDepth);
+		this->Root = KH_FlatBVHNode::BuildNodeSAH(*Triangles, BVHNodes, 0, Triangles->size(), 0, MaxLeafTriangles, MaxBVHDepth);
 		break;
 	}
 }

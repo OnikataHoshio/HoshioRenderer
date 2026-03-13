@@ -21,6 +21,9 @@
 #include <filesystem>
 #include <iomanip>
 
+#include "ranges"
+
+
 // ================= OpenGL / Window =================
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>

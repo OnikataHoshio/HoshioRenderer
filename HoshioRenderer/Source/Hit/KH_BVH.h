@@ -3,7 +3,7 @@
 #include "Pipeline/KH_SSBO.h"
 
 class KH_Shader;
-struct KH_Triangle;
+class KH_Triangle;
 
 enum class KH_BVH_SPLIT_MODE
 {
@@ -71,7 +71,6 @@ public:
 	//unsigned int ModelMats_SSBO = 0;
 	KH_SSBO<glm::mat4> ModelMats_SSBO;
 
-
 	void RenderAABB(KH_Shader& Shader, glm::vec3 Color);
 
 	virtual void BindAndBuild(std::vector<KH_Triangle>& Triangles) = 0;
@@ -126,41 +125,39 @@ private:
 
 #pragma endregion
 
-#pragma region LBVH
+#pragma region FlatBVH
 
-class KH_LBVHNode : public KH_IBVHNode
+class KH_FlatBVHNode : public KH_IBVHNode
 {
 public:
 	int Left, Right;
 
-	static int BuildNode(std::vector<KH_Triangle>& Triangles, std::vector<KH_LBVHNode>& LBVHNodes, uint32_t BeginIndex, uint32_t EndIndex, uint32_t Depth, uint32_t MaxNum, uint32_t MaxDepth);
+	static int BuildNode(std::vector<KH_Triangle>& Triangles, std::vector<KH_FlatBVHNode>& FlatBVHNodes, uint32_t BeginIndex, uint32_t EndIndex, uint32_t Depth, uint32_t MaxNum, uint32_t MaxDepth);
 
-	static int BuildNodeSAH(std::vector<KH_Triangle>& Triangles, std::vector<KH_LBVHNode>& LBVHNodes, uint32_t BeginIndex, uint32_t EndIndex, uint32_t Depth, uint32_t MaxNum, uint32_t MaxDepth);
+	static int BuildNodeSAH(std::vector<KH_Triangle>& Triangles, std::vector<KH_FlatBVHNode>& FlatBVHNodes, uint32_t BeginIndex, uint32_t EndIndex, uint32_t Depth, uint32_t MaxNum, uint32_t MaxDepth);
 
-	void Hit(std::vector<KH_BVHHitInfo>& HitInfos, std::vector<KH_LBVHNode>& LBVHNodes, KH_Ray& Ray);
+	void Hit(std::vector<KH_BVHHitInfo>& HitInfos, std::vector<KH_FlatBVHNode>& FlatBVHNodes, KH_Ray& Ray);
 };
 
-#define KH_LBVH_NULL_NODE -1
+#define KH_FLAT_BVH_NULL_NODE -1
 
-class KH_LBVH : public KH_IBVH
+class KH_FlatBVH : public KH_IBVH
 {
 public:
-	int Root = KH_LBVH_NULL_NODE;
-	std::vector<KH_LBVHNode> LBVHNodes;
+	int Root = KH_FLAT_BVH_NULL_NODE;
+	std::vector<KH_FlatBVHNode> BVHNodes;
 
-	KH_LBVH() = default;
-	KH_LBVH(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles);
-	~KH_LBVH() override = default;
+	KH_FlatBVH() = default;
+	KH_FlatBVH(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles);
+	~KH_FlatBVH() override = default;
 
 	void BindAndBuild(std::vector<KH_Triangle>& Triangles) override;
 	std::vector<KH_BVHHitInfo> Hit(KH_Ray& Ray) override;
 
-	
-
 private:
 	void FillModelMatrices(uint32_t TargetDepth) override;
 
-	void FillModelMatrices_Inner(int LBVHNodeID, uint32_t CurrentDepth, uint32_t TargetDepth);
+	void FillModelMatrices_Inner(int FlatBVHNodeID, uint32_t CurrentDepth, uint32_t TargetDepth);
 
 	void BuildBVH() override;
 };

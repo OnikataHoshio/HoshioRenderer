@@ -66,5 +66,19 @@ private:
 	KH_Shader RadixSort_Scan_Pass3;
 };
 
+class KH_MortonCode
+{
+public:
+	static uint32_t Morton3D(uint32_t x, uint32_t y, uint32_t z);
+		  
+	static uint32_t Morton3D_MagicBits(uint32_t x, uint32_t y, uint32_t z);
+		  
+	static uint32_t Morton3DFloat_MagicBits(float x, float y, float z, uint32_t MORTON_RESOLUTION = 1023u);
 
+	static uint32_t Morton3DFloat_MagicBits(glm::vec3 p, uint32_t MORTON_RESOLUTION = 1023u);
+
+	static uint64_t Morton3DFloat_IndexAugmentation(glm::vec3 p, uint32_t index, uint32_t MORTON_RESOLUTION = 1023u);
+private: 
+	static uint32_t ExpandBits(uint32_t v);
+};
 

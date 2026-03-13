@@ -19,8 +19,8 @@ KH_Triangle::KH_Triangle()
     Normal = glm::vec3(0.0f, -1.0f, 0.0f);
     N1 = N2 = N3 = Normal;
 
-    AABB.MinPos = glm::min(P1, glm::min(P2, P3));
-    AABB.MaxPos = glm::max(P1, glm::max(P2, P3));
+    AABB.MinPos = GetMinPos();
+    AABB.MaxPos = GetMaxPos();
 }
 
 KH_Triangle::KH_Triangle(glm::vec3 P1, glm::vec3 P2, glm::vec3 P3)
@@ -34,8 +34,8 @@ KH_Triangle::KH_Triangle(glm::vec3 P1, glm::vec3 P2, glm::vec3 P3)
     Normal = glm::normalize(glm::cross(P1P2, P1P3));
     N1 = N2 = N3 = Normal;
 
-    AABB.MinPos = glm::min(P1, glm::min(P2, P3));
-    AABB.MaxPos = glm::max(P1, glm::max(P2, P3));
+    AABB.MinPos = GetMinPos();
+    AABB.MaxPos = GetMaxPos();
 }
 
 KH_Triangle::KH_Triangle(glm::vec3 P1, glm::vec3 P2, glm::vec3 P3, int MaterialSlot)
@@ -49,8 +49,8 @@ KH_Triangle::KH_Triangle(glm::vec3 P1, glm::vec3 P2, glm::vec3 P3, int MaterialS
     Normal = glm::normalize(glm::cross(P1P2, P1P3));
     N1 = N2 = N3 = Normal;
 
-    AABB.MinPos = glm::min(P1, glm::min(P2, P3));
-    AABB.MaxPos = glm::max(P1, glm::max(P2, P3));
+    AABB.MinPos = GetMinPos();
+    AABB.MaxPos = GetMaxPos();
 }
 
 KH_Triangle::KH_Triangle(glm::vec3 P1, glm::vec3 P2, glm::vec3 P3, glm::vec3 N1, glm::vec3 N2, glm::vec3 N3)
@@ -63,8 +63,8 @@ KH_Triangle::KH_Triangle(glm::vec3 P1, glm::vec3 P2, glm::vec3 P3, glm::vec3 N1,
 
     Normal = glm::normalize(glm::cross(P1P2, P1P3));
 
-    AABB.MinPos = glm::min(P1, glm::min(P2, P3));
-    AABB.MaxPos = glm::max(P1, glm::max(P2, P3));
+    AABB.MinPos = GetMinPos();
+    AABB.MaxPos = GetMaxPos();
 }
 
 KH_Triangle::KH_Triangle(glm::vec3 P1, glm::vec3 P2, glm::vec3 P3, glm::vec3 N1, glm::vec3 N2, glm::vec3 N3,
@@ -78,8 +78,8 @@ KH_Triangle::KH_Triangle(glm::vec3 P1, glm::vec3 P2, glm::vec3 P3, glm::vec3 N1,
 
     Normal = glm::normalize(glm::cross(P1P2, P1P3));
 
-    AABB.MinPos = glm::min(P1, glm::min(P2, P3));
-    AABB.MaxPos = glm::max(P1, glm::max(P2, P3));
+    AABB.MinPos = GetMinPos();
+    AABB.MaxPos = GetMaxPos();
 }
 
 
@@ -115,6 +115,16 @@ KH_HitResult KH_Triangle::Hit(KH_Ray& Ray)
     result.Normal = glm::normalize(w1 * N1 + u * N2 + v * N3);
 
     return result;
+}
+
+glm::vec3 KH_Triangle::GetMinPos() const
+{
+    return glm::min(P1, glm::min(P2, P3));
+}
+
+glm::vec3 KH_Triangle::GetMaxPos() const
+{
+    return glm::max(P1, glm::max(P2, P3));
 }
 
 bool KH_Triangle::Cmpx(const KH_Triangle& t1, const KH_Triangle& t2)

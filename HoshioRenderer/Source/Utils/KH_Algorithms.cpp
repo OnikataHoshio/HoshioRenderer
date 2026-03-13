@@ -1,4 +1,5 @@
-#include "KH_GPUAlgorithms.h"
+#include "KH_Algorithms.h"
+#include "KH_DebugUtils.h"
 
 KH_ScanCPU::KH_ScanCPU(std::vector<int>& Data)
 	:Data(Data)
@@ -230,4 +231,102 @@ void KH_RadixSort::RunRadixSortStep(int* dataPtr, int count, int bitShift)
 	RadixSort_FinalOrderSSBO.GetData(RadixSort_FinalOrderData);
 
 	memcpy(dataPtr, RadixSort_FinalOrderData.data(), count * sizeof(int));
+}
+
+uint32_t KH_MortonCode::Morton3D(uint32_t x, uint32_t y, uint32_t z)
+{
+
+	if ((x | y | z) > 1023u)
+	{
+		LOG_W(std::format("KH_MortonCode::Morton3D: Input ({}, {}, {}) out of 10-bit range [0, 1023].", x, y, z));
+		x &= 1023; y &= 1023; z &= 1023;
+	}
+
+	int morton = 0;
+
+	for (int i = 0; i < 10; i++)
+	{
+		int bit_x = ((x >> i) & 0b01) << (i * 3 + 2);
+		int bit_y = ((y >> i) & 0b01) << (i * 3 + 1);
+		int bit_z = ((z >> i) & 0b01) << (i * 3 + 0);
+		morton |= bit_x | bit_y | bit_z;
+	}
+
+	return morton;
+}
+
+uint32_t KH_MortonCode::Morton3D_MagicBits(uint32_t x, uint32_t y, uint32_t z)
+{
+	if ((x | y | z) > 1023u)
+	{
+		LOG_W(std::format("KH_MortonCode::Morton3D_MagicBits: Input ({}, {}, {}) out of 10-bit range [0, 1023].", x, y, z));
+		x &= 1023; y &= 1023; z &= 1023;
+	}
+
+	uint32_t bit_x = ExpandBits(x);
+	uint32_t bit_y = ExpandBits(y);
+	uint32_t bit_z = ExpandBits(z);
+
+	return (bit_x << 2) | (bit_y << 1) | bit_z;
+}
+
+uint32_t KH_MortonCode::Morton3DFloat_MagicBits(float x, float y, float z, uint32_t MORTON_RESOLUTION)
+{
+	MORTON_RESOLUTION = std::min(MORTON_RESOLUTION, std::max(MORTON_RESOLUTION, 0u));
+
+	uint32_t uint_x = static_cast<uint32_t>(x * MORTON_RESOLUTION);
+	uint32_t uint_y = static_cast<uint32_t>(y * MORTON_RESOLUTION);
+	uint32_t uint_z = static_cast<uint32_t>(z * MORTON_RESOLUTION);
+
+	if ((uint_x | uint_y | uint_z) > 1023u)
+	{
+		LOG_W(std::format("KH_MortonCode::Morton3D_MagicBits: Input ({}, {}, {}) out of range [0, 1].", x, y, z));
+		uint_x &= 1023; uint_y &= 1023; uint_z &= 1023;
+	}
+
+	uint32_t bit_x = ExpandBits(uint_x);
+	uint32_t bit_y = ExpandBits(uint_y);
+	uint32_t bit_z = ExpandBits(uint_z);
+
+	return (bit_x << 2) | (bit_y << 1) | bit_z;
+}
+
+uint32_t KH_MortonCode::Morton3DFloat_MagicBits(glm::vec3 p, uint32_t MORTON_RESOLUTION)
+{
+	MORTON_RESOLUTION = std::min(MORTON_RESOLUTION, std::max(MORTON_RESOLUTION, 0u));
+
+	uint32_t uint_x = static_cast<uint32_t>(p.x * MORTON_RESOLUTION);
+	uint32_t uint_y = static_cast<uint32_t>(p.y * MORTON_RESOLUTION);
+	uint32_t uint_z = static_cast<uint32_t>(p.z * MORTON_RESOLUTION);
+
+	if ((uint_x | uint_y | uint_z) > 1023u)
+	{
+		LOG_W(std::format("KH_MortonCode::Morton3D_MagicBits: Input ({}, {}, {}) out of range [0, 1].", p.x, p.y, p.z));
+		uint_x &= 1023; uint_y &= 1023; uint_z &= 1023;
+	}
+
+	uint32_t bit_x = ExpandBits(uint_x);
+	uint32_t bit_y = ExpandBits(uint_y);
+	uint32_t bit_z = ExpandBits(uint_z);
+
+	return (bit_x << 2) | (bit_y << 1) | bit_z;
+}
+
+uint64_t KH_MortonCode::Morton3DFloat_IndexAugmentation(glm::vec3 p, uint32_t index, uint32_t MORTON_RESOLUTION)
+{
+	uint32_t Morton = Morton3DFloat_MagicBits(p, MORTON_RESOLUTION);
+
+	uint64_t CombinedMorton = (static_cast<uint64_t>(Morton) << 32) | index;
+
+	return CombinedMorton;
+}
+
+uint32_t KH_MortonCode::ExpandBits(uint32_t v)
+{
+	v = (v * 0x00010001u) & 0xFF0000FFu;
+	v = (v * 0x00000101u) & 0x0F00F00Fu;
+	v = (v * 0x00000011u) & 0xC30C30C3u;
+	v = (v * 0x00000005u) & 0x49249249u;
+
+	return v;
 }

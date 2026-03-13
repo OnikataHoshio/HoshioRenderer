@@ -67,6 +67,7 @@ public:
 	KH_Model EmptyCube;
 	KH_Model Plane;
 	KH_Model Bunny;
+	KH_Model MortonCurve;
 
 	KH_DefaultModels(const KH_DefaultModels&) = delete;
 	KH_DefaultModels& operator=(const KH_DefaultModels&) = delete;
@@ -82,6 +83,8 @@ private:
 	void InitPlane();
 
 	void InitBunny();
+
+	void InitMortonCurve();
 };
 
 

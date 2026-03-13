@@ -4,6 +4,8 @@
 
 class KH_Ray;
 
+class KH_Triangle;
+
 struct KH_AABBHitInfo
 {
 	float HitTime = std::numeric_limits<float>::max();
@@ -13,13 +15,21 @@ struct KH_AABBHitInfo
 class KH_AABB
 {
 public:
-	KH_AABB(glm::vec3 MinPos = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 MaxPos = glm::vec3(0.0f, 0.0f, 0.0f));
+	KH_AABB(glm::vec3 MinPos = glm::vec3(std::numeric_limits<float>::max()), glm::vec3 MaxPos = glm::vec3(-std::numeric_limits<float>::max()));
 
 	KH_AABBHitInfo Hit(KH_Ray& Ray);
 
 	bool CheckOverlap(KH_AABB& Other);
 
 	void Merge(const KH_AABB& Other);
+
+	void Merge(const glm::vec3& OtherMinPos, const glm::vec3& OtherMaxPos);
+
+	void Merge(const KH_Triangle& Triangle);
+
+	void Update(const KH_Triangle& Triangle);
+
+	bool IsInvalid() const;
 
 	glm::vec3 GetSize() const;
 

@@ -3,6 +3,8 @@
 #include "Pipeline/KH_Shader.h"
 #include "Editor/KH_Camera.h"
 #include "Editor/KH_Editor.h"
+#include "Utils/KH_Algorithms.h"
+
 
 
 glm::mat4 KH_Object::GetModelMatrix()
@@ -154,6 +156,7 @@ KH_DefaultModels::KH_DefaultModels()
     InitEmptyCube();
     InitPlane();
     InitBunny();
+    InitMortonCurve();
 }
 
 void KH_DefaultModels::InitCube()
@@ -236,4 +239,32 @@ void KH_DefaultModels::InitPlane()
 void KH_DefaultModels::InitBunny()
 {
     Bunny.LoadOBJ("Assert/Models/bunny.obj");
+}
+
+void KH_DefaultModels::InitMortonCurve()
+{
+    const int Dim = 8;
+    const int VertCount = Dim * Dim * Dim;
+    std::vector<glm::vec3> Vertices(VertCount);
+    std::vector<unsigned int> Indices(VertCount);
+
+
+    for (int x = 0; x < Dim; x++) {
+        for (int y = 0; y < Dim; y++) {
+            for (int z = 0; z < Dim; z++) {
+                int linearIdx = z + Dim * y + Dim * Dim * x;
+                Vertices[linearIdx] = glm::vec3(x, y, z) / (float)Dim;
+                uint32_t MortonCode = KH_MortonCode::Morton3D_MagicBits(x, y, z);
+                if (MortonCode < VertCount)
+                {
+                    Indices[MortonCode] = linearIdx;
+                }
+            }
+        }
+    }
+
+    MortonCurve.SetVertices(Vertices);
+    MortonCurve.SetIndices(Indices);
+    MortonCurve.UpdateBuffer();
+    MortonCurve.SetDrawMode(GL_LINE_STRIP);
 }
