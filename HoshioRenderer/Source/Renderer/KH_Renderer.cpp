@@ -5,7 +5,6 @@
 #include "Utils/KH_RandomUtils.h"
 #include "utils/KH_DebugUtils.h"
 #include "Pipeline/KH_Material.h"
-
 #include "Editor/KH_Editor.h"
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -16,7 +15,7 @@
 
 KH_BaseMaterial& Material = KH_DefaultMaterial::Instance().BaseMaterial1;
 
-void KH_RendererBase::Render(KH_Scene& Scene)
+void KH_RendererBase::Render(KH_BVHScene& Scene)
 {
 	const int Width = KH_Editor::CanvasWidth;
 	const int Height = KH_Editor::CanvasHeight;
@@ -58,7 +57,7 @@ void KH_RendererBase::Render(KH_Scene& Scene)
 	SaveImage("output.png", Width, Height, Channel, PixelData.data());
 }
 
-KH_HitResult KH_RendererBase::CastRay(KH_Scene& Scene, KH_Ray& Ray)
+KH_HitResult KH_RendererBase::CastRay(KH_BVHScene& Scene, KH_Ray& Ray)
 {
 	KH_HitResult HitResult;
 	switch (TraversalMode)
@@ -73,7 +72,7 @@ KH_HitResult KH_RendererBase::CastRay(KH_Scene& Scene, KH_Ray& Ray)
 	return HitResult;
 }
 
-glm::vec3 KH_RendererBase::PathTracing(KH_Scene& Scene, KH_Ray& Ray, unsigned int Depth)
+glm::vec3 KH_RendererBase::PathTracing(KH_BVHScene& Scene, KH_Ray& Ray, unsigned int Depth)
 {
 	if (Depth > 8)
 		return glm::vec3(0.0f);
@@ -144,7 +143,7 @@ glm::vec3 KH_RendererBase::PathTracing(KH_Scene& Scene, KH_Ray& Ray, unsigned in
 	return Color / float(P);
 }
 
-KH_HitResult KH_RendererBase::CastRayBase(KH_Scene& Scene, KH_Ray& Ray)
+KH_HitResult KH_RendererBase::CastRayBase(KH_BVHScene& Scene, KH_Ray& Ray)
 {
 	KH_HitResult HitResult, temp;
 	for (auto& Triangle : Scene.Triangles)
@@ -156,7 +155,7 @@ KH_HitResult KH_RendererBase::CastRayBase(KH_Scene& Scene, KH_Ray& Ray)
 	return HitResult;
 }
 
-KH_HitResult KH_RendererBase::CastRayBVH(KH_Scene& Scene, KH_Ray& Ray)
+KH_HitResult KH_RendererBase::CastRayBVH(KH_BVHScene& Scene, KH_Ray& Ray)
 {
 	std::vector<KH_BVHHitInfo> BVHHitInfos = Scene.BVH.Hit(Ray);
 	KH_HitResult HitResult, temp;
@@ -174,6 +173,7 @@ KH_HitResult KH_RendererBase::CastRayBVH(KH_Scene& Scene, KH_Ray& Ray)
 	return HitResult;
 
 }
+
 
 void KH_RendererBase::SaveImage(const char* FilePath, const int Width, const int Height, const int Channel,
                                 const void* Data)

@@ -17,6 +17,17 @@ glm::vec3 KH_AABB::GetSize() const
 	return MaxPos - MinPos;
 }
 
+glm::vec3 KH_AABB::GetInvSize() const
+{
+	glm::vec3 size = MaxPos - MinPos;
+
+	return glm::vec3(
+		size.x > EPS ? 1.0f / size.x : 0.0f,
+		size.y > EPS ? 1.0f / size.y : 0.0f,
+		size.z > EPS ? 1.0f / size.z : 0.0f
+	);
+}
+
 glm::vec3 KH_AABB::GetCenter() const
 {
 	return (MinPos + MaxPos) / 2.0f;

@@ -1,6 +1,6 @@
 #pragma once
 #include "KH_AABB.h"
-#include "Pipeline/KH_SSBO.h"
+#include "Pipeline/KH_Buffer.h"
 
 class KH_Shader;
 class KH_Triangle;
@@ -56,7 +56,7 @@ class KH_IBVH
 {
 public:
 	KH_IBVH() = default;
-	KH_IBVH(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles);
+	KH_IBVH(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles, KH_BVH_BUILD_MODE BuildMode = KH_BVH_BUILD_MODE::Base);
 	virtual ~KH_IBVH() = default;
 
 	std::vector<KH_Triangle>* Triangles = nullptr;
@@ -108,7 +108,7 @@ public:
 	std::unique_ptr<KH_BVHNode> Root;
 
 	KH_BVH();
-	KH_BVH(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles);
+	KH_BVH(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles, KH_BVH_BUILD_MODE BuildMode = KH_BVH_BUILD_MODE::Base);
 	~KH_BVH() override = default;
 
 	void BindAndBuild(std::vector<KH_Triangle>& Triangles) override;
@@ -148,7 +148,7 @@ public:
 	std::vector<KH_FlatBVHNode> BVHNodes;
 
 	KH_FlatBVH() = default;
-	KH_FlatBVH(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles);
+	KH_FlatBVH(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles, KH_BVH_BUILD_MODE BuildMode = KH_BVH_BUILD_MODE::Base);
 	~KH_FlatBVH() override = default;
 
 	void BindAndBuild(std::vector<KH_Triangle>& Triangles) override;

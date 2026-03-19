@@ -3,16 +3,6 @@ out vec4 FragColor;
 
 in vec3 CanvasPos; 
 
-struct CameraParam
-{
-    vec3 Position;
-    vec3 Right;
-    vec3 Up;
-    vec3 Front;
-    float Aspect;
-    float Fovy;
-};
-
 struct Triangle{
     vec4 P1, P2, P3;
     vec4 N1, N2, N3;
@@ -47,11 +37,23 @@ layout(std430, binding = 2) buffer LBVHNodeSSBO{
     LBVHNode LBVHNodes[];
 };
 
-uniform CameraParam UCameraParam;
+layout(std430, binding = 3) buffer SortedIndicesSSBO{
+    int SortedIndices[];
+};
+
+layout(std140, binding = 4) uniform CameraBlock {
+    vec4 AspectAndFovy; // x: Aspect, y: Fovy
+    vec4 Position;
+    vec4 Right;
+    vec4 Up;
+    vec4 Front;
+} UCameraParam;
 
 uniform int TriangleCount;
 
 uniform int LBVHNodeCount;
+
+uniform int RootNodeID;
 
 struct Ray
 {
@@ -73,11 +75,11 @@ struct HitResult {
 
 vec3 GetRayDirection(float u, float v)
 {
-    float scale = tan(radians(UCameraParam.Fovy) * 0.5);
+    float scale = tan(radians(UCameraParam.AspectAndFovy.y) * 0.5);
 
-    vec3 DirWorldSpace = (u * UCameraParam.Aspect * scale) * UCameraParam.Right +
-        (v * scale) * UCameraParam.Up +
-        UCameraParam.Front;
+    vec3 DirWorldSpace = (u * UCameraParam.AspectAndFovy.x * scale) * UCameraParam.Right.xyz +
+        (v * scale) * UCameraParam.Up.xyz +
+        UCameraParam.Front.xyz;
 
     return normalize(DirWorldSpace);
 }
@@ -131,7 +133,7 @@ HitResult Hit(Ray ray, int l, int r)
 
 	for (int i = l; i < r; i++)
 	{
-		HitResult temp = HitTriangle(i, ray);
+		HitResult temp = HitTriangle(SortedIndices[i], ray);
 		if (temp.bIsHit && temp.Distance < hit_result.Distance)
 			hit_result = temp;
 	}
@@ -172,7 +174,7 @@ HitResult HitBVH(Ray ray)
     int stack[256];
     int top = 0;
 
-    stack[top++] = 0;
+    stack[top++] = RootNodeID;
 
     while(top > 0)
     {
@@ -189,7 +191,7 @@ HitResult HitBVH(Ray ray)
 
         if(isLeaf == 1)
         {
-            HitResult temp = Hit(ray, offset , offset+size); 
+            HitResult temp = Hit(ray, offset , offset + size); 
             if (temp.bIsHit && temp.Distance < hit_result.Distance)
 			    hit_result = temp;
             continue;
@@ -198,9 +200,9 @@ HitResult HitBVH(Ray ray)
         float t_left = -INF;
         float t_right = -INF;
 
-        if(left > 0 && left < LBVHNodeCount)
+        if(left >= 0 && left < LBVHNodeCount)
             t_left = HitAABB(left, ray);
-        if(right > 0 && right < LBVHNodeCount)
+        if(right >= 0 && right < LBVHNodeCount)
             t_right = HitAABB(right, ray);
 
         if(t_left > 0 && t_right > 0)
@@ -232,10 +234,12 @@ void main()
     float u = CanvasPos.x;
     float v = CanvasPos.y;
     Ray ray;
-    ray.Start = UCameraParam.Position;
+    ray.Start = UCameraParam.Position.xyz;
     ray.Direction = GetRayDirection(u, v);
 
     HitResult hit_result = HitBVH(ray);
+
+    //HitResult hit_result = Hit(ray, 0,  2);
 
     if(hit_result.bIsHit)
     {

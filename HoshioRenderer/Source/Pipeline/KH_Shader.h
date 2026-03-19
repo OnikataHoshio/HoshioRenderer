@@ -20,6 +20,9 @@ public:
     void SetFloat(const std::string& name, float value) const;
     void SetMat4(const std::string& name, const glm::mat4& mat) const;
     void SetVec3(const std::string& name, const glm::vec3& value) const;
+    void SetVec4(const std::string& name, const glm::vec4& value) const;
+
+    void PrintActiveUniform();
 
 private:
     static void CheckCompileErrors(unsigned int shader, std::string type);
@@ -39,8 +42,9 @@ public:
     KH_Shader TestShader;
     KH_Shader AABBShader;
     KH_Shader TestCanvasShader;
-    KH_Shader RayTracingShader1;
-    KH_Shader RayTracingShader2;
-    KH_Shader RayTracingShader3;
-    KH_Shader RayTracingShader4;
+    KH_Shader RayTracingShader1_0;
+    KH_Shader RayTracingShader1_1;
+    KH_Shader RayTracingShader1_2;
+    KH_Shader RayTracingShader1_3;
+    KH_Shader RayTracingShader2_0;
 };

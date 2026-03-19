@@ -13,7 +13,7 @@ void KH_LBVHNode::Hit(std::vector<KH_BVHHitInfo>& HitInfos, std::vector<KH_LBVHN
 	{
 		KH_BVHHitInfo BVHHitInfo;
 		BVHHitInfo.BeginIndex = Range.x;
-		BVHHitInfo.EndIndex = Range.y;
+		BVHHitInfo.EndIndex = Range.y + 1;
 		BVHHitInfo.HitTime = AABBHit.HitTime;
 		BVHHitInfo.bIsHit = true;
 		HitInfos.push_back(BVHHitInfo);
@@ -37,6 +37,7 @@ void KH_LBVH::BindAndBuild(std::vector<KH_Triangle>& Triangles)
 	FillDeltaBuffer();
 	InitLBVHNodes();
 	BuildBVH();
+	FillModelMatrices(MaxBVHDepth);
 }
 
 void KH_LBVH::BindAndBuild(std::vector<KH_Triangle>& Triangles, KH_AABB AABB)
@@ -53,6 +54,7 @@ void KH_LBVH::BindAndBuild(std::vector<KH_Triangle>& Triangles, KH_AABB AABB)
 	FillDeltaBuffer();
 	InitLBVHNodes();
 	BuildBVH();
+	FillModelMatrices(MaxBVHDepth);
 }
 
 std::vector<KH_BVHHitInfo> KH_LBVH::Hit(KH_Ray& Ray)
@@ -68,13 +70,16 @@ void KH_LBVH::SortTriangleIndices()
 	const std::vector<KH_Triangle>& Tris = *Triangles;
 
 	Tri2Mortons.resize(TriangleCount);
+	SortedIndices.resize(TriangleCount);
 
-	glm::vec3 AABB_Size = AABB.GetSize();
+	glm::vec3 AABB_InvSize = AABB.GetInvSize();
 
 	for (int i = 0; i < TriangleCount; i++)
 	{
-		glm::vec3 Positon = Tris[i].Center;
-		Tri2Mortons[i] = KH_MortonCode::Morton3DFloat_IndexAugmentation((Positon - AABB.MinPos) / AABB_Size, i);
+		glm::vec3 Position = Tris[i].Center;
+		glm::vec3 p = (Position - AABB.MinPos) * AABB_InvSize;
+		p = glm::clamp(p, glm::vec3(0.0f), glm::vec3(1.0f));
+		Tri2Mortons[i] = KH_MortonCode::Morton3DFloat_IndexAugmentation(p, i);
 	}
 
 	std::ranges::sort(Tri2Mortons);
@@ -93,7 +98,6 @@ int KH_LBVH::ComputeDelta(int i)
 
 	if (diff == 0) return 64;
 
-
 #ifdef _MSC_VER
 	unsigned long leading;
 	_BitScanReverse64(&leading, diff);
@@ -101,9 +105,8 @@ int KH_LBVH::ComputeDelta(int i)
 #else
 	return __builtin_clzll(diff);
 #endif
+
 }
-
-
 
 void KH_LBVH::FillDeltaBuffer()
 {
@@ -127,7 +130,7 @@ void KH_LBVH::InitLBVHNodes()
 
 	for (int i = 0; i < N; i++)
 	{
-		BVHNodes[i].Range = glm::i64vec2(Tri2Mortons[i], Tri2Mortons[i]);
+		BVHNodes[i].Range = glm::ivec2(i, i);
 		BVHNodes[i].AABB.Update(Tris[SortedIndices[i]]);
 	}
 
@@ -135,9 +138,9 @@ void KH_LBVH::InitLBVHNodes()
 }
 
 
-bool KH_LBVH::IsLeafChild(int NodeID) const
+bool KH_LBVH::IsLeftChild(int NodeID) const
 {
-	glm::i64vec2 Range = BVHNodes[NodeID].Range;
+	glm::ivec2 Range = BVHNodes[NodeID].Range;
 	return DeltaBuffer[Range.x] < DeltaBuffer[Range.y + 1];
 }
 
@@ -145,14 +148,33 @@ bool KH_LBVH::IsLeafChild(int NodeID) const
 bool KH_LBVH::IsRootNode(int NodeID) const
 {
 	const int N = TriangleCount;
-	glm::i64vec2 Range = BVHNodes[NodeID].Range;
+	glm::ivec2 Range = BVHNodes[NodeID].Range;
 	return Range.x == BVHNodes[0].Range.x && Range.y == BVHNodes[N - 1].Range.y;
+}
+
+bool KH_LBVH::IsLeafNode(int NodeID) const
+{
+	return NodeID < TriangleCount;
+}
+
+int KH_LBVH::GetTriangleIndices(int NodeID) const
+{
+	if (IsLeafNode(NodeID))
+		return SortedIndices[NodeID];
+	return -1;
 }
 
 void KH_LBVH::BuildBVH()
 {
 	const std::vector<KH_Triangle>& Tris = *Triangles;
 	const int N = TriangleCount;
+
+	if (N == 1)
+	{
+		Root = 0;
+		return;
+	}
+
 
 	for (int i = 0; i < N; i++)
 	{
@@ -161,7 +183,7 @@ void KH_LBVH::BuildBVH()
 		int ParentGlobalID;
 		while (true)
 		{
-			if (IsLeafChild(NodeID))
+			if (IsLeftChild(NodeID))
 			{
 				ParentLocalID = BVHNodes[NodeID].Range.y;
 				AtomicTags[ParentLocalID] += 1;
@@ -245,7 +267,7 @@ void KH_LBVH::FillModelMatrices_Inner(int LBVHNodeID, uint32_t CurrentDepth, uin
 	if (LBVHNodeID == KH_LBVH_NULL_NODE)
 		return;
 
-	if (CurrentDepth == TargetDepth || LBVHNodeID < Triangles->size())
+	if (CurrentDepth == TargetDepth || IsLeafNode(LBVHNodeID))
 	{
 		//TODO : Do some optimization
 		ModelMats.push_back(BVHNodes[LBVHNodeID].AABB.GetModelMatrix());

@@ -96,8 +96,8 @@ KH_BVHSplitInfo KH_IBVHNode::SelectSplitModeSAH(std::vector<KH_Triangle>& Triang
 	return BestSplit;
 }
 
-KH_IBVH::KH_IBVH(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles)
-	:MaxBVHDepth(MaxBVHDepth), MaxLeafTriangles(MaxLeafTriangles)
+KH_IBVH::KH_IBVH(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles, KH_BVH_BUILD_MODE BuildMode)
+	:MaxBVHDepth(MaxBVHDepth), MaxLeafTriangles(MaxLeafTriangles), BuildMode(BuildMode)
 {
 }
 
@@ -226,8 +226,8 @@ KH_BVH::KH_BVH()
 	Root = std::make_unique<KH_BVHNode>();
 }
 
-KH_BVH::KH_BVH(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles)
-	:KH_IBVH(MaxBVHDepth, MaxLeafTriangles)
+KH_BVH::KH_BVH(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles, KH_BVH_BUILD_MODE BuildMode)
+	:KH_IBVH(MaxBVHDepth, MaxLeafTriangles,BuildMode)
 {
 	Root = std::make_unique<KH_BVHNode>();
 }
@@ -435,8 +435,8 @@ void KH_FlatBVHNode::Hit(std::vector<KH_BVHHitInfo>& HitInfos, std::vector<KH_Fl
 }
 
 
-KH_FlatBVH::KH_FlatBVH(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles)
-	:KH_IBVH(MaxBVHDepth, MaxLeafTriangles)
+KH_FlatBVH::KH_FlatBVH(uint32_t MaxBVHDepth, uint32_t MaxLeafTriangles, KH_BVH_BUILD_MODE BuildMode)
+	:KH_IBVH(MaxBVHDepth, MaxLeafTriangles, BuildMode)
 {
 }
 

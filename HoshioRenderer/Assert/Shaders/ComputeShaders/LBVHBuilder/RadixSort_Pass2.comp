@@ -1,0 +1,62 @@
+#version 460
+
+layout (local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 2) buffer ShuffleBuffer { uvec2 LocalShuffle[]; };
+layout(std430, binding = 3) buffer BlockSumBuffer { uvec4 BlockSum[]; };
+layout(std430, binding = 4) buffer PreBlockSumBuffer { uvec4 PreBlockSum[]; };
+layout(std430, binding = 1) buffer FinalOrderBuffer {uvec2 FinalOrder[]; };
+
+uniform int uElementCount;
+uniform int uBitShift; 
+
+const int THREAD_COUNT = 128;
+const int BLOCK_SIZE = 256;
+
+shared uint sOffset[4];
+
+uint ExtractBits(uvec2 data) {
+    if(uBitShift > 30)
+        return (data.x >> (uBitShift - 30)) & 3;
+    else 
+        return (data.y >> uBitShift) & 3;
+}
+
+void main(){
+    uint threadId = gl_LocalInvocationID.x;  
+    uint groupId = gl_WorkGroupID.x;
+    
+    if (threadId == 0) {
+        uvec4 digit_total = BlockSum[groupId];
+        sOffset[0] = 0;
+        sOffset[1] = digit_total.x;
+        sOffset[2] = digit_total.x + digit_total.y;
+        sOffset[3] = digit_total.x + digit_total.y + digit_total.z;
+    }
+
+    barrier();
+
+    uint offset = groupId * BLOCK_SIZE;
+    
+    uint localIdx1 = threadId;
+    uint idx1 = offset + localIdx1;
+    if(idx1 < uElementCount)
+    {
+        uvec2 data = LocalShuffle[idx1];
+        uint bits = ExtractBits(data);
+        uint in_bucket_idx = localIdx1 - sOffset[bits];
+        uint global_final_pos = PreBlockSum[groupId][bits] + in_bucket_idx;
+        FinalOrder[global_final_pos] = data;
+    }
+
+    uint localIdx2 = threadId + THREAD_COUNT;
+    uint idx2 = offset + localIdx2;
+    if(idx2 < uElementCount)
+    {
+        uvec2 data = LocalShuffle[idx2];
+        uint bits = ExtractBits(data);
+        uint in_bucket_idx = localIdx2 - sOffset[bits];
+        uint global_final_pos = PreBlockSum[groupId][bits] + in_bucket_idx;
+        FinalOrder[global_final_pos] = data;
+    }
+}

@@ -116,28 +116,57 @@ void KH_Shader::Use() const
 
 void KH_Shader::SetInt(const std::string& name, int value) const
 {
-    glUniform1i(glGetUniformLocation(ID, name.c_str()), value);
+    unsigned int location = glGetUniformLocation(ID, name.c_str());
+    glUniform1i(location, value);
 }
 
 void KH_Shader::SetUint(const std::string& name, uint32_t value) const
 {
-    glUniform1ui(glGetUniformLocation(ID, name.c_str()), value);
+    unsigned int location = glGetUniformLocation(ID, name.c_str());
+    glUniform1ui(location, value);
 }
 
 void KH_Shader::SetFloat(const std::string& name, float value) const
 {
-    unsigned int Location = glGetUniformLocation(ID, name.c_str());
-    glUniform1f(Location, value);
+    unsigned int location = glGetUniformLocation(ID, name.c_str());
+    glUniform1f(location, value);
 }
 
 void KH_Shader::SetMat4(const std::string& name, const glm::mat4& mat) const
 {
-    glUniformMatrix4fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, &mat[0][0]);
+    unsigned int location = glGetUniformLocation(ID, name.c_str());
+    glUniformMatrix4fv(location, 1, GL_FALSE, &mat[0][0]);
 }
 
 void KH_Shader::SetVec3(const std::string& name, const glm::vec3& value) const
 {
-    glUniform3fv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]);
+    unsigned int location = glGetUniformLocation(ID, name.c_str());
+    glUniform3fv(location, 1, &value[0]);
+}
+
+
+void KH_Shader::SetVec4(const std::string& name, const glm::vec4& value) const
+{
+    unsigned int location = glGetUniformLocation(ID, name.c_str());
+    glUniform4fv(location, 1, &value[0]);
+}
+
+void KH_Shader::PrintActiveUniform()
+{
+    GLint count = 0;
+    glGetProgramiv(ID, GL_ACTIVE_UNIFORMS, &count);
+    std::cout << "ID: " << ID << std::endl << "Active uniforms: " << count << std::endl;
+
+    for (GLint i = 0; i < count; ++i)
+    {
+        char name[256];
+        GLsizei length = 0;
+        GLint size = 0;
+        GLenum type = 0;
+        glGetActiveUniform(ID, i, sizeof(name), &length, &size, &type, name);
+        GLint loc = glGetUniformLocation(ID, name);
+        std::cout << i << ": " << name << ", loc = " << loc << std::endl;
+    }
 }
 
 void KH_Shader::CheckCompileErrors(unsigned int shader, std::string type)
@@ -179,14 +208,17 @@ void KH_ExampleShaders::InitShaders()
     PrintShaderLoadMessage("AABBShader");
     TestCanvasShader.Create("Assert/Shaders/DefaultCanvas.vert", "Assert/Shaders/DefaultCanvas.frag");
     PrintShaderLoadMessage("TestCanvasShader");
-    RayTracingShader1.Create("Assert/Shaders/DefaultCanvas.vert", "Assert/Shaders/RayTracingV1.frag");
-    PrintShaderLoadMessage("RayTracingShaderV1");
-    RayTracingShader2.Create("Assert/Shaders/DefaultCanvas.vert", "Assert/Shaders/RayTracingV2.frag");
-    PrintShaderLoadMessage("RayTracingShaderV2");
-    RayTracingShader3.Create("Assert/Shaders/DefaultCanvas.vert", "Assert/Shaders/RayTracingV3.frag");
-    PrintShaderLoadMessage("RayTracingShaderV3");
-    RayTracingShader4.Create("Assert/Shaders/DefaultCanvas.vert", "Assert/Shaders/RayTracingV4.frag");
-    PrintShaderLoadMessage("RayTracingShaderV4");
+    RayTracingShader1_0.Create("Assert/Shaders/DefaultCanvas.vert", "Assert/Shaders/RayTracing1_0.frag");
+    PrintShaderLoadMessage("RayTracingShader1-0");                                                               
+    RayTracingShader1_1.Create("Assert/Shaders/DefaultCanvas.vert", "Assert/Shaders/RayTracing1_1.frag");
+    PrintShaderLoadMessage("RayTracingShader1-1");                                                               
+    RayTracingShader1_2.Create("Assert/Shaders/DefaultCanvas.vert", "Assert/Shaders/RayTracing1_2.frag");
+    PrintShaderLoadMessage("RayTracingShader1-2");                                                                
+    RayTracingShader1_3.Create("Assert/Shaders/DefaultCanvas.vert", "Assert/Shaders/RayTracing1_3.frag");
+    PrintShaderLoadMessage("RayTracingShader1-3");                                                               
+    RayTracingShader2_0.Create("Assert/Shaders/DefaultCanvas.vert", "Assert/Shaders/RayTracing2_0.frag");
+    //RayTracingShader2_0.PrintActiveUniform();
+    PrintShaderLoadMessage("RayTracingShader2_0");
 }
 
 void KH_ExampleShaders::PrintShaderLoadMessage(std::string ShaderName)

@@ -1,0 +1,25 @@
+#version 460
+
+layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 4) buffer ScanBuffer { 
+    uvec4 GlobalScan[]; 
+};
+
+layout(std430, binding = 5) readonly buffer BlockSumBuffer { 
+    uvec4 PrefixBlockSum[]; 
+};
+
+uniform int u_elementCount;
+
+void main()
+{
+    uint globalId = gl_GlobalInvocationID.x;
+    uint groupId = gl_WorkGroupID.x;
+    
+    if(globalId < u_elementCount)
+    {
+        uvec4 offset = PrefixBlockSum[groupId];
+        GlobalScan[globalId] += offset;
+    }
+}

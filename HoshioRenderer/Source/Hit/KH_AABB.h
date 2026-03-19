@@ -33,6 +33,8 @@ public:
 
 	glm::vec3 GetSize() const;
 
+	glm::vec3 GetInvSize() const;
+
 	glm::vec3 GetCenter() const;
 
 	glm::vec3 GetScale() const;

@@ -1,0 +1,61 @@
+#version 460
+
+layout (local_size_x = 1024, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 0) buffer CenterBuffer { vec4 Centers[]; };
+layout(std430, binding = 1) buffer Morton3DBuffer { uvec2 Morton3D[]; };
+
+uniform int uElementCount;
+uniform uint uMortonResolution;
+uniform vec4 uAABBMinPos;
+uniform vec4 uAABBInvSize;
+
+uint ExpandBits(uint v)
+{
+	v = (v * 0x00010001) & 0xFF0000FF;
+	v = (v * 0x00000101) & 0x0F00F00F;
+	v = (v * 0x00000011) & 0xC30C30C3;
+	v = (v * 0x00000005) & 0x49249249;
+	return v;
+}
+
+uint Morton3DFloat_MagicBits(vec3 p)
+{
+	uint MaxCoord = 1023;
+	uint DefaultResolution = 1024; 
+
+	uint Resolution =
+		(uMortonResolution == 0) ? DefaultResolution
+		: min(uMortonResolution, DefaultResolution);
+
+    vec3 Original = p;
+
+	p = clamp(p, vec3(0.0f), vec3(1.0f));
+
+	uvec3 xyz = min(uvec3(MaxCoord), uvec3(p * Resolution));
+
+	uint bit_x = ExpandBits(xyz.x);
+	uint bit_y = ExpandBits(xyz.y);
+	uint bit_z = ExpandBits(xyz.z);
+
+	return (bit_x << 2u) | (bit_y << 1u) | bit_z;
+}
+
+uvec2 Morton3DFloat_IndexAugmentation(vec3 p, uint globalID)
+{
+	uint morton = Morton3DFloat_MagicBits(p);
+	return uvec2(morton, globalID);
+}
+
+void main()
+{
+	uint globalID = gl_GlobalInvocationID.x;
+
+	if(globalID < uElementCount)
+	{
+		vec4 Center = Centers[globalID];
+		vec4 p = (Center - uAABBMinPos) * uAABBInvSize;
+		p = clamp(p, vec4(0.0f), vec4(1.0f));
+		Morton3D[globalID] = Morton3DFloat_IndexAugmentation(p.xyz, globalID);
+	}
+}

@@ -1,0 +1,89 @@
+#version 460
+
+layout (local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 1) buffer InputBuffer { uvec2 Morton3D[]; };
+layout(std430, binding = 2) buffer ShuffleBuffer { uvec2 LocalShuffle[]; };
+layout(std430, binding = 3) buffer BlockSumBuffer { uvec4 BlockSum[]; };
+
+uniform int uElementCount;
+uniform int uBitShift; 
+
+const int THREAD_COUNT = 128;
+const int BLOCK_SIZE = 256;
+
+shared uvec4 sDigitTotal; 
+shared uint sOffset[4];
+shared uvec4 sCnt[BLOCK_SIZE]; 
+shared uvec2 sLocalShuffle[BLOCK_SIZE];
+
+uint ExtractBits(uvec2 data) {
+    if(uBitShift > 30)
+        return (data.x >> (uBitShift - 30)) & 3;
+    else 
+        return (data.y >> uBitShift) & 3;
+}
+
+void main(){
+    uint threadId = gl_LocalInvocationID.x;  
+    uint groupId = gl_WorkGroupID.x;
+    
+    uint offset = groupId * BLOCK_SIZE;
+    uint idx1 = offset + threadId;
+    uint idx2 = offset + threadId + THREAD_COUNT;
+
+    uvec2 data1 = (idx1 < uElementCount) ? Morton3D[idx1] : uvec2(2147483647);
+    uvec2 data2 = (idx2 < uElementCount) ? Morton3D[idx2] : uvec2(2147483647);
+    uint bits1 = ExtractBits(data1);
+    uint bits2 = ExtractBits(data2);
+
+    sCnt[threadId] = ivec4(0);
+    sCnt[threadId + THREAD_COUNT] = ivec4(0);
+
+    if(idx1 < uElementCount) sCnt[threadId][bits1] = 1;
+    if(idx2 < uElementCount) sCnt[threadId + THREAD_COUNT][bits2] = 1;
+    barrier();
+
+    for (int stride = 1; stride < BLOCK_SIZE; stride <<= 1) {
+        int index = (int(threadId) + 1) * stride * 2 - 1;
+        if (index < BLOCK_SIZE) {
+            sCnt[index] += sCnt[index - stride];
+        }
+        barrier();
+    }
+
+    if (threadId == 0) {
+        sDigitTotal = sCnt[BLOCK_SIZE - 1];
+        BlockSum[groupId] = sDigitTotal;
+        sCnt[BLOCK_SIZE - 1] = ivec4(0); 
+        
+        sOffset[0] = 0;
+        sOffset[1] = sDigitTotal.x;
+        sOffset[2] = sDigitTotal.x + sDigitTotal.y;
+        sOffset[3] = sDigitTotal.x + sDigitTotal.y + sDigitTotal.z;
+    }
+    barrier();
+
+    for (int stride = BLOCK_SIZE / 2; stride > 0; stride >>= 1) {
+        int index = (int(threadId) + 1) * stride * 2 - 1;
+        if (index < BLOCK_SIZE) {
+            uvec4 temp = sCnt[index - stride];
+            sCnt[index - stride] = sCnt[index];
+            sCnt[index] += temp;
+        }
+        barrier();
+    }
+
+    int targetIdx1 = (idx1 < uElementCount) ? int(sOffset[bits1] + sCnt[threadId][bits1]) : -1;
+    int targetIdx2 = (idx2 < uElementCount) ? int(sOffset[bits2] + sCnt[threadId + THREAD_COUNT][bits2]) : -1;
+    
+    barrier();
+    if(targetIdx1 != -1) sLocalShuffle[targetIdx1] = data1;
+    if(targetIdx2 != -1) sLocalShuffle[targetIdx2] = data2;
+    barrier();
+
+    if (idx1 < uElementCount) LocalShuffle[idx1] = sLocalShuffle[threadId];
+    if (idx2 < uElementCount) LocalShuffle[idx2] = sLocalShuffle[threadId + THREAD_COUNT];
+}
+
+

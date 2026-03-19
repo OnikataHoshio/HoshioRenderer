@@ -16,7 +16,12 @@ int main()
 
 	KH_Model& Bunny = KH_DefaultModels::Instance().Bunny;
 	KH_Model& MortonCurve = KH_DefaultModels::Instance().MortonCurve;
-	KH_Scene& BunnyScene = KH_ExampleScenes::Instance().ExampleScene1;
+	KH_FlatBVHScene& FlatBVHBunnyScene = KH_FlatBVHExampleScenes::Instance().Bunny;
+	KH_FlatBVHScene& FlatBVHSingleTriangleScene = KH_FlatBVHExampleScenes::Instance().SingleTriangle;
+	KH_FlatBVHScene& FlatBVHDebugBoxScene = KH_FlatBVHExampleScenes::Instance().DebugBox;
+	KH_LBVHScene& LBVHBunnyScene = KH_LBVHExampleScenes::Instance().Bunny;
+	KH_LBVHScene& LBVHSingleTriangleScene = KH_LBVHExampleScenes::Instance().SingleTriangle;
+	KH_LBVHScene& LBVHDebugBoxScene = KH_LBVHExampleScenes::Instance().DebugBox;
 	KH_Shader& TestShader = KH_ExampleShaders::Instance().TestShader;
 	KH_Shader& AABBShader = KH_ExampleShaders::Instance().AABBShader;
 
@@ -37,10 +42,18 @@ int main()
 		Framebuffer.Unbind();
 
 		//Bunny.Render(TestShader);
-		MortonCurve.Render(TestShader);
-		//BunnyScene.BVH.RenderAABB(AABBShader, glm::vec3(1.0f, 1.0f, 1.0f));
+		//MortonCurve.Render(TestShader);
+		//FlatBVHBunnyScene.BVH.RenderAABB(AABBShader, glm::vec3(1.0f, 1.0f, 1.0f));
+		//LBVHBunnyScene.BVH.RenderAABB(AABBShader, glm::vec3(1.0f, 1.0f, 1.0f));
+		//FlatBVHDebugBoxScene.BVH.RenderAABB(AABBShader, glm::vec3(1.0f, 1.0f, 1.0f));
 
-		//BunnyScene.Render();
+
+		//FlatBVHSingleTriangleScene.Render();
+		//FlatBVHBunnyScene.Render();
+		//FlatBVHDebugBoxScene.Render();
+		//LBVHSingleTriangleScene.Render();
+		LBVHBunnyScene.Render();
+		//LBVHDebugBoxScene.Render();
 
 		KH_Editor::Instance().EndRender();
 	}
