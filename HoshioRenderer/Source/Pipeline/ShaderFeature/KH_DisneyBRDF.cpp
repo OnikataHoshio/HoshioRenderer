@@ -12,7 +12,9 @@ void KH_DisneyBRDF::DrawControlPanel()
 	KH_Editor& Editor = KH_Editor::Instance();
 
 	static bool bEnableSobol = false;
-	static bool bEnableImportantSampling = false;
+	static bool bEnableImportanceSampling = false;
+	static bool bEnableMIS = false;
+	static bool bEnableSkybox = false;
 	static int SelectedISMode = 0;   // 0: Diffuse, 1: Specular, 2: Clearcoat
 	static int PrevAllowSingleIS = uAllowSingleIS;
 
@@ -31,14 +33,26 @@ void KH_DisneyBRDF::DrawControlPanel()
 		bNeedReset = true;
 	}
 
-	if (ImGui::Checkbox("EnableImportantSampling", &bEnableImportantSampling))
+	if (ImGui::Checkbox("EnableImportanceSampling", &bEnableImportanceSampling))
 	{
 		bNeedReset = true;
 	}
 
-
-	if (bEnableImportantSampling)
+	if (ImGui::Checkbox("EnableSkybox", &bEnableSkybox))
 	{
+		bNeedReset = true;
+	}
+
+	if (bEnableImportanceSampling)
+	{
+		if (bEnableSkybox)
+		{
+			if (ImGui::Checkbox("EnableMIS", &bEnableMIS))
+			{
+				bNeedReset = true;
+			}
+		}
+
 		bool bSingleIS = (uAllowSingleIS == 1);
 		if (ImGui::Checkbox("Allow Single IS", &bSingleIS))
 		{
@@ -95,7 +109,9 @@ void KH_DisneyBRDF::DrawControlPanel()
 	}
 
 	SetEnableSobol(bEnableSobol);
-	SetEnableImportantSampling(bEnableImportantSampling);
+	SetEnableSkybox(bEnableSkybox);
+	SetEnableImportanceSampling(bEnableImportanceSampling);
+	SetEnableMIS(bEnableMIS);
 	SetEnableDiffuseIS(bEnableDiffuseIS);
 	SetEnableSpecularIS(bEnableSpecularIS);
 	SetEnableClearcoatIS(bEnableClearcoatIS);
@@ -104,7 +120,9 @@ void KH_DisneyBRDF::DrawControlPanel()
 void KH_DisneyBRDF::ApplyUniforms()
 {
 	Shader.SetInt("uEnableSobol", uEnableSobol);
-	Shader.SetInt("uEnableImportantSampling", uEnableImportantSampling);
+	Shader.SetInt("uEnableSkybox", uEnableSkybox);
+	Shader.SetInt("uEnableImportanceSampling", uEnableImportanceSampling);
+	Shader.SetInt("uEnableMIS", uEnableMIS);
 	Shader.SetInt("uAllowSingleIS", uAllowSingleIS);
 	Shader.SetInt("uEnableDiffuseIS", uEnableDiffuseIS);
 	Shader.SetInt("uEnableSpecularIS", uEnableSpecularIS);
@@ -116,9 +134,19 @@ void KH_DisneyBRDF::SetEnableSobol(bool bEnable)
 	uEnableSobol = bEnable ? 1 : 0;
 }
 
-void KH_DisneyBRDF::SetEnableImportantSampling(bool bEnable)
+void KH_DisneyBRDF::SetEnableSkybox(bool bEnable)
 {
-	uEnableImportantSampling = bEnable ? 1 : 0;
+	uEnableSkybox = bEnable ? 1 : 0;
+}
+
+void KH_DisneyBRDF::SetEnableImportanceSampling(bool bEnable)
+{
+	uEnableImportanceSampling = bEnable ? 1 : 0;
+}
+
+void KH_DisneyBRDF::SetEnableMIS(bool bEnable)
+{
+	uEnableMIS = bEnable ? 1 : 0;
 }
 
 void KH_DisneyBRDF::SetEnableDiffuseIS(bool bEnable)

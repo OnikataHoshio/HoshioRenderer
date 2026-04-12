@@ -61,6 +61,8 @@ public:
         KH_TEXTURE_TYPE type = KH_TEXTURE_TYPE::DEFAULT,
         bool flipY = true);
 
+    KH_Texture CreateHDRCache(const std::string& filePath, bool generateMipmap = false, bool flipY = true);
+
     void GarbageCollect();
     void Clear();
 
@@ -82,6 +84,8 @@ private:
         KH_TEXTURE_TYPE type,
         bool flipY);
 
+    std::shared_ptr<KH_TextureResource> CreateHDRCacheTextureResource(const std::string& normalizedPath, bool generateMipmap, bool flipY);
+
     void LoadStandardTexture(KH_TextureResource& resource,
         const char* path,
         bool generateMipmap,
@@ -91,7 +95,13 @@ private:
         const char* path,
         bool generateMipmap,
         bool flipY) const;
+
+    void CreateHDRCacheTexture(KH_TextureResource& resource, 
+        const char* path,
+        bool generateMipmap,
+        bool flipY) const;
 };
+
 
 class KH_ExampleTextures : public KH_Singleton<KH_ExampleTextures>
 {
@@ -103,6 +113,7 @@ private:
     void InitTextures();
    
 public:
-    KH_Texture FirePlaceHDR;
+    KH_Texture SkyboxHDR;
+    KH_Texture SkyboxHDRCache;
 
 };

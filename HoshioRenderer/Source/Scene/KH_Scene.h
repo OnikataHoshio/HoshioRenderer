@@ -97,7 +97,7 @@ public:
     KH_GpuLBVH BVH;
 
     KH_GpuLBVHScene() {
-        ShaderFeature.SetShader(KH_ExampleShaders::Instance().DisneyBRDF_2);
+        ShaderFeature.SetShader(KH_ExampleShaders::Instance().DisneyBRDF_4);
         Primitive_SSBO.SetBindPoint(0);
         Material_SSBO.SetBindPoint(4);
         CameraParam_UB0.SetBindPoint(5);

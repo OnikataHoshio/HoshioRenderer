@@ -62,7 +62,7 @@ uniform uint uFrameCounter;
 uniform uvec2 uResolution; 
 
 uniform int uEnableSobol;
-uniform int uEnableImportantSampling;
+uniform int uEnableImportanceSampling;
 uniform int uAllowSingleIS;
 uniform int uEnableDiffuseIS;
 uniform int uEnableSpecularIS;
@@ -802,7 +802,6 @@ vec3 PathTracing(Ray ray, int maxBounce)
             vec2 p = CranleyPattersonRotation(sobol2, pix, bounce);
             xi_1 = p.x;
             xi_2 = p.y;
-            // xi_3 目前仍然使用白噪声；若要更稳，可再补一个 Sobol 维度
         }
 
         SampleBRDFResult sample_result;
@@ -810,7 +809,7 @@ vec3 PathTracing(Ray ray, int maxBounce)
         sample_result.cosTheta = 0.0;
         sample_result.PDF = 0.0;
 
-        if (uEnableImportantSampling == 1)
+        if (uEnableImportanceSampling == 1)
         {
             if (uAllowSingleIS == 1)
                 sample_result = SampleSingleIS(xi_1, xi_2, V, Ns, hit_result.MaterialSlot);

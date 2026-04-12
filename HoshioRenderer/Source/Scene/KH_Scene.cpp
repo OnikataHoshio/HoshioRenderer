@@ -237,10 +237,12 @@ void KH_GpuLBVHScene::SetRayTracingParam(KH_Shader& Shader)
     Shader.SetUvec2("uResolution", glm::uvec2(KH_Editor::GetCanvasWidth(), KH_Editor::GetCanvasHeight()));
 
     KH_Editor::Instance().GetLastFramebuffer().BindColorAttachment(0, 0);
-    KH_ExampleTextures::Instance().FirePlaceHDR.Bind(1);
+    KH_ExampleTextures::Instance().SkyboxHDR.Bind(1);
+    KH_ExampleTextures::Instance().SkyboxHDRCache.Bind(2);
 
     Shader.SetInt("uLastFrame", 0);
     Shader.SetInt("uSkybox", 1);
+    Shader.SetInt("uHDRCache", 2);
 
     ShaderFeature.ApplyUniforms();
 

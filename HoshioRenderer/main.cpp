@@ -3,7 +3,6 @@
 #include "Scene/KH_Scene.h"
 #include "Pipeline/RenderGraph/KH_PostProcessGraph.h"
 #include "Utils/KH_Algorithms.h"
-
 #include "Pipeline/RenderGraph/ScenePass/KH_DrawSobolPass.h"
 
 int main()

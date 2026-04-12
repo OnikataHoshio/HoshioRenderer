@@ -532,7 +532,11 @@ std::vector<uint32_t> KH_Sobol::GenerateDirectionNumbers(uint32_t D, uint32_t S,
 	std::cout << std::format("V[1]-[32]:\n");
 	for (int i = 1; i <=32;i++)
 	{
-		std::cout << V[i] << std::endl;
+		std::cout << V[i] << ", ";
+
+		if (i % 6 == 0)
+			std::cout << std::endl;
+
 	}
 	std::cout << std::endl;
 	return V;
