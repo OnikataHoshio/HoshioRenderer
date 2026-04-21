@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scene version="4">
-    <SceneSettings activeShaderFeature="BSSRDF"/>
+    <SceneSettings activeShaderFeature="DisneyBSDF"/>
     <ShaderFeatures>
         <ShaderFeature type="DisneyBRDF" enabled="true">
             <Materials>
-                <Material id="0" baseColor="0.800000012 0.800000012 0.800000012" emissive="3.87400007 2.45099998 3.10599995" subsurface="0" metallic="0" specular="0.5" specularTint="0" roughness="0.5" anisotropic="0" sheen="0" sheenTint="0" clearcoat="0" clearcoatGloss="0" ior="1.5" transmission="0"/>
-                <Material id="1" baseColor="0 1 0.075949192" emissive="0 0 0" subsurface="0" metallic="0" specular="0.5" specularTint="0" roughness="0.5" anisotropic="0" sheen="0" sheenTint="0" clearcoat="0" clearcoatGloss="0" ior="1.5" transmission="0"/>
-                <Material id="2" baseColor="1 0 0" emissive="0 0 0" subsurface="0" metallic="0" specular="1" specularTint="0" roughness="0.28999999" anisotropic="0" sheen="0" sheenTint="0" clearcoat="0" clearcoatGloss="0" ior="1.5" transmission="0"/>
+                <Material id="0" baseColor="0.800000012 0.800000012 0.800000012" emissive="3.87400007 2.45099998 3.10599995" subsurface="0" metallic="0" specular="0.5" specularTint="0" roughness="0.5" anisotropic="0" sheen="0" sheenTint="0" clearcoat="0" clearcoatGloss="0"/>
+                <Material id="1" baseColor="0 0.658227861 0.0499918759" emissive="0 0 0" subsurface="0" metallic="0" specular="0.5" specularTint="0" roughness="0" anisotropic="0" sheen="0" sheenTint="0" clearcoat="0" clearcoatGloss="0"/>
+                <Material id="2" baseColor="0.0295358896 0.0295358896 0.0295358896" emissive="0 0 0" subsurface="0" metallic="0" specular="1" specularTint="0" roughness="0.28999999" anisotropic="0" sheen="0" sheenTint="0" clearcoat="0" clearcoatGloss="0"/>
             </Materials>
         </ShaderFeature>
         <ShaderFeature type="BSSRDF" enabled="true">
@@ -16,25 +16,34 @@
                 <Material id="2" emissive="0 0 0" baseColor="1 1 1" radius="1 0.200000003 0.100000001" eta="1.29" scale="0.050000001"/>
             </Materials>
         </ShaderFeature>
+        <ShaderFeature type="DisneyBSDF" enabled="true">
+            <Materials>
+                <Material id="0" baseColor="1 1 1" emissive="0 0 0" subsurface="0" metallic="0" specular="1" specularTint="0" roughness="0" anisotropic="0" sheen="0" sheenTint="0" clearcoat="0" clearcoatGloss="0" ior="1.5" transmission="1"/>
+                <Material id="1" baseColor="0.800000012 0.800000012 0.800000012" emissive="1 1 1" subsurface="0" metallic="0" specular="0.5" specularTint="0" roughness="0.5" anisotropic="0" sheen="0" sheenTint="0" clearcoat="0" clearcoatGloss="0" ior="1.4400001" transmission="1"/>
+                <Material id="2" baseColor="0 0 0" emissive="0 0 0" subsurface="0" metallic="0" specular="0.5" specularTint="0" roughness="1" anisotropic="0" sheen="0" sheenTint="0" clearcoat="1" clearcoatGloss="0" ior="1.5" transmission="0"/>
+            </Materials>
+        </ShaderFeature>
     </ShaderFeatures>
     <Objects>
-        <Model sourceType="Builtin" builtinType="Plane" size="1">
+        <Model sourceType="Builtin" builtinType="Cube" size="1" sectorCount="64" stackCount="32">
             <MeshMaterialSlots>
                 <MeshMaterialSlot meshID="0">
                     <Slot feature="DisneyBRDF" material="0"/>
                     <Slot feature="BSSRDF" material="0"/>
+                    <Slot feature="DisneyBSDF" material="2"/>
                 </MeshMaterialSlot>
             </MeshMaterialSlots>
-            <Transform position="0.0140934959 0.876168787 0" rotation="0 -0 0" scale="0.649999976 0.649999976 0.649999976"/>
+            <Transform position="0 0 0" rotation="0 -0 0" scale="1 1 0.195568532"/>
         </Model>
-        <Model sourceType="Builtin" builtinType="Cube" size="1">
+        <Model sourceType="Builtin" builtinType="Cube" size="1" sectorCount="64" stackCount="32">
             <MeshMaterialSlots>
                 <MeshMaterialSlot meshID="0">
                     <Slot feature="DisneyBRDF" material="0"/>
-                    <Slot feature="BSSRDF" material="1"/>
+                    <Slot feature="BSSRDF" material="0"/>
+                    <Slot feature="DisneyBSDF" material="0"/>
                 </MeshMaterialSlot>
             </MeshMaterialSlots>
-            <Transform position="0 0 0" rotation="0 0 0" scale="1 1 1"/>
+            <Transform position="-0.0734367371 -0.0223693717 0.744309783" rotation="0 -0 0" scale="2.33999991 0.372000009 0.208000004"/>
         </Model>
     </Objects>
 </Scene>

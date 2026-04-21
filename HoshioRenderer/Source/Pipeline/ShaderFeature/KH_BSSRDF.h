@@ -49,7 +49,6 @@ private:
 
 private:
     int InvertCDF_Resolution = 4096;
-    float Rmax = 0.01f;
     int EnableSkybox = 0;
 
     std::vector<KH_BSSRDFMaterial> Materials;

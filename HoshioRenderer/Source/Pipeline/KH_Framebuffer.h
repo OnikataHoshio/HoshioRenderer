@@ -78,6 +78,8 @@ public:
     void BindDepthAttachment(uint32_t unit = 0) const;
     void UnbindTexture(uint32_t unit = 0) const;
 
+    bool SaveColorAttachmentToPNG(const std::string& filePath, uint32_t attachmentIndex = 0) const;
+
     uint32_t GetRendererID() const { return FBO; }
     uint32_t GetWidth() const { return Desc.Width; }
     uint32_t GetHeight() const { return Desc.Height; }

@@ -5,6 +5,7 @@ enum class KH_ShaderFeatureType : uint8_t
 {
     DisneyBRDF = 0,
     BSSRDF,
+    DisneyBSDF,
     Count
 };
 

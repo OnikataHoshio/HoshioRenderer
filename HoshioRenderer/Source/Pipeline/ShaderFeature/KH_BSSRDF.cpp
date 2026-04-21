@@ -101,11 +101,6 @@ void KH_BSSRDF::DrawControlPanel()
     ImGui::Text("FrameCounter: %d", std::min(Editor.GetFrameCounter(), 2048u));
 
     bool bNeedReset = false;
-
-    if (ImGui::DragFloat("Rmax", &Rmax, 0.001f, 0.001f, 1000.0f))
-    {
-        bNeedReset = true;
-    }
  
     if (ImGui::Checkbox("EnableSkybox", &bEnableSkybox))
     {
@@ -125,7 +120,6 @@ void KH_BSSRDF::DrawControlPanel()
 void KH_BSSRDF::ApplyUniforms()
 {
     Shader.SetInt("uInvertCDFResolution", InvertCDF_Resolution);
-    Shader.SetFloat("uRmax", Rmax);
     Shader.SetInt("uEnableSkybox", EnableSkybox);
 }
 

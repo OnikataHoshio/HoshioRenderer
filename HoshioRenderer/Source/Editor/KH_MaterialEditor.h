@@ -5,6 +5,7 @@
 class KH_Editor;
 class KH_DisneyBRDF;
 class KH_BSSRDF;
+class KH_DisneyBSDF;
 
 class KH_MaterialEditor : public KH_Panel
 {
@@ -25,5 +26,6 @@ private:
 
     void RenderDisneyBRDFEditor(KH_DisneyBRDF& Feature, KH_Editor& Editor);
     void RenderBSSRDFEditor(KH_BSSRDF& Feature, KH_Editor& Editor);
+    void RenderDisneyBSDFEditor(KH_DisneyBSDF& Feature, KH_Editor& Editor);
 };
 

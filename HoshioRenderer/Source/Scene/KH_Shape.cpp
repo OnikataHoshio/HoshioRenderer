@@ -138,7 +138,9 @@ KH_InspectorEditResult KH_Object::DrawInspector()
                 model->SetMeshMaterialSlotID(ActiveType, NewMaterialID, SelectedMeshID);
             });
 
+            ImGui::Indent(20.0f);
             ImGui::TextDisabled("Selected Mesh ID: %d", SelectedMeshID);
+            ImGui::Unindent(20.0f);
         }
     }
     else if (KH_Primitive* Primitive = dynamic_cast<KH_Primitive*>(this))

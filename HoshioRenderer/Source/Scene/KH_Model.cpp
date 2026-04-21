@@ -16,7 +16,9 @@ KH_Model::KH_Model(KH_Model&& other) noexcept
     SourcePath(std::move(other.SourcePath)),
     SourceType(other.SourceType),
     BuiltinType(other.BuiltinType),
-    BuiltinSize(other.BuiltinSize)
+    BuiltinSize(other.BuiltinSize),
+    BuiltinSectorCount(other.BuiltinSectorCount),
+    BuiltinStackCount(other.BuiltinStackCount)
 {
     AABB = other.AABB;
 }
@@ -32,6 +34,8 @@ KH_Model& KH_Model::operator=(KH_Model&& other) noexcept
         SourceType = other.SourceType;
         BuiltinType = other.BuiltinType;
         BuiltinSize = other.BuiltinSize;
+        BuiltinSectorCount = other.BuiltinSectorCount;
+        BuiltinStackCount = other.BuiltinStackCount;
     }
     return *this;
 }
@@ -41,6 +45,8 @@ void KH_Model::SetSourceAsInline()
     SourceType = KH_ModelSourceType::Inline;
     BuiltinType = KH_BuiltinModelType::None;
     BuiltinSize = 1.0f;
+    BuiltinSectorCount = 64;
+    BuiltinStackCount = 32;
     SourcePath.clear();
     Directory.clear();
 }
@@ -67,6 +73,8 @@ void KH_Model::LoadModel(const std::string& path)
     SourceType = KH_ModelSourceType::Asset;
     BuiltinType = KH_BuiltinModelType::None;
     BuiltinSize = 1.0f;
+    BuiltinSectorCount = 64;
+    BuiltinStackCount = 32;
     SourcePath = path;
 
     Assimp::Importer import;
@@ -141,7 +149,11 @@ void KH_Model::AddMesh(KH_Mesh&& mesh)
 }
 
 
-KH_Model KH_Model::CreateBuiltin(KH_BuiltinModelType type, float size)
+KH_Model KH_Model::CreateBuiltin(
+    KH_BuiltinModelType type,
+    float size,
+    unsigned int sectorCount,
+    unsigned int stackCount)
 {
     KH_Model model;
 
@@ -159,6 +171,9 @@ KH_Model KH_Model::CreateBuiltin(KH_BuiltinModelType type, float size)
     case KH_BuiltinModelType::EmptyCube:
         model.AddMesh(KH_PrimitiveFactory::CreateEmptyCubeMesh(size));
         break;
+    case KH_BuiltinModelType::Sphere:
+        model.AddMesh(KH_PrimitiveFactory::CreateSphereMesh(size, sectorCount, stackCount));
+        break;
     default:
         break;
     }
@@ -166,6 +181,8 @@ KH_Model KH_Model::CreateBuiltin(KH_BuiltinModelType type, float size)
     model.SourceType = KH_ModelSourceType::Builtin;
     model.BuiltinType = type;
     model.BuiltinSize = size;
+    model.BuiltinSectorCount = sectorCount;
+    model.BuiltinStackCount = stackCount;
     model.SourcePath.clear();
     model.Directory.clear();
 
@@ -503,11 +520,12 @@ KH_Mesh KH_PrimitiveFactory::CreatePlaneMesh(float size)
     vertices[3].Bitangent = glm::vec3(0.0f, 0.0f, 1.0f);
     vertices[3].UV = glm::vec2(0.0f, 1.0f);
 
-    std::vector<unsigned int> indices =
+    std::vector<unsigned int> indices = 
     {
-        0, 1, 2,
-        0, 2, 3
+	    0, 2, 1,
+    	0, 3, 2
     };
+
 
     std::vector<KH_Texture> textures;
     return KH_Mesh(vertices, indices, textures);
@@ -680,6 +698,87 @@ KH_Model KH_PrimitiveFactory::CreateFullscreenQuad(float size)
     return KH_Model::CreateBuiltin(KH_BuiltinModelType::FullscreenQuad, size);
 }
 
+KH_Mesh KH_PrimitiveFactory::CreateSphereMesh(float size, unsigned int sectorCount, unsigned int stackCount)
+{
+    if (sectorCount < 3)
+        sectorCount = 3;
+
+    if (stackCount < 2)
+        stackCount = 2;
+
+    const float radius = size * 0.5f;
+
+    std::vector<KH_Vertex> vertices;
+    std::vector<unsigned int> indices;
+    std::vector<KH_Texture> textures;
+
+    vertices.reserve((stackCount + 1) * (sectorCount + 1));
+    indices.reserve(stackCount * sectorCount * 6);
+
+    for (unsigned int i = 0; i <= stackCount; ++i)
+    {
+        const float stackRatio = static_cast<float>(i) / static_cast<float>(stackCount);
+        const float phi = PI * stackRatio;
+
+        const float y = radius * std::cos(phi);
+        const float ringRadius = radius * std::sin(phi);
+
+        for (unsigned int j = 0; j <= sectorCount; ++j)
+        {
+            const float sectorRatio = static_cast<float>(j) / static_cast<float>(sectorCount);
+            const float theta = 2.0f * PI * sectorRatio;
+
+            const float x = ringRadius * std::cos(theta);
+            const float z = ringRadius * std::sin(theta);
+
+            KH_Vertex vertex;
+            vertex.Position = glm::vec3(x, y, z);
+
+            if (radius > 0.0f)
+                vertex.Normal = glm::normalize(vertex.Position);
+            else
+                vertex.Normal = glm::vec3(0.0f, 1.0f, 0.0f);
+
+            vertex.UV = glm::vec2(sectorRatio, stackRatio);
+
+            vertex.Tangent = glm::normalize(glm::vec3(
+                -std::sin(theta),
+                0.0f,
+                std::cos(theta)
+            ));
+
+            vertex.Bitangent = glm::normalize(glm::cross(vertex.Tangent, vertex.Normal));
+
+            vertices.push_back(vertex);
+        }
+    }
+
+    for (unsigned int i = 0; i < stackCount; ++i)
+    {
+        unsigned int k1 = i * (sectorCount + 1);
+        unsigned int k2 = k1 + sectorCount + 1;
+
+        for (unsigned int j = 0; j < sectorCount; ++j, ++k1, ++k2)
+        {
+            if (i != 0)
+            {
+                indices.push_back(k1);
+                indices.push_back(k1 + 1);
+                indices.push_back(k2);
+            }
+
+            if (i != stackCount - 1)
+            {
+                indices.push_back(k1 + 1);
+                indices.push_back(k2 + 1);
+                indices.push_back(k2);
+            }
+        }
+    }
+
+    return KH_Mesh(vertices, indices, textures, GL_TRIANGLES);
+}
+
 KH_Model KH_PrimitiveFactory::CreatePlane(float size)
 {
     return KH_Model::CreateBuiltin(KH_BuiltinModelType::Plane, size);
@@ -693,6 +792,19 @@ KH_Model KH_PrimitiveFactory::CreateCube(float size)
 KH_Model KH_PrimitiveFactory::CreateEmptyCube(float size)
 {
     return KH_Model::CreateBuiltin(KH_BuiltinModelType::EmptyCube, size);
+}
+
+KH_Model KH_PrimitiveFactory::CreateSphere(
+    float size,
+    unsigned int sectorCount,
+    unsigned int stackCount)
+{
+    return KH_Model::CreateBuiltin(
+        KH_BuiltinModelType::Sphere,
+        size,
+        sectorCount,
+        stackCount
+    );
 }
 
 KH_DefaultModels::KH_DefaultModels()

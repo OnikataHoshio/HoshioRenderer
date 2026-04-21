@@ -6,6 +6,8 @@
 #include "Pipeline/ShaderFeature/KH_DisneyBRDF.h"
 #include "Pipeline/ShaderFeature/KH_BSSRDF.h"
 
+#include "Pipeline/ShaderFeature/KH_DisneyBSDF.h"
+
 enum class KH_BVH_BUILD_MODE;
 
 struct KH_CameraParam {
@@ -117,8 +119,11 @@ public:
             EmplaceShaderFeature<KH_DisneyBRDF>(KH_ShaderFeatureType::DisneyBRDF);
         auto& BSSRDF_Feature =
             EmplaceShaderFeature<KH_BSSRDF>(KH_ShaderFeatureType::BSSRDF);
+        auto& DisneyBSDF_Feature =
+            EmplaceShaderFeature<KH_DisneyBSDF>(KH_ShaderFeatureType::DisneyBSDF);
         DisneyBRDF_Feature.SetShader(KH_ExampleShaders::Instance().DisneyBRDF_4);
         BSSRDF_Feature.SetShader(KH_ExampleShaders::Instance().BSSRDF_3);
+        DisneyBSDF_Feature.SetShader(KH_ExampleShaders::Instance().DisneyBSDF_6);
 
         SetActiveShaderFeature(KH_ShaderFeatureType::DisneyBRDF);
     }

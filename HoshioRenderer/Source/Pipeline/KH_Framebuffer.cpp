@@ -2,6 +2,9 @@
 #include "KH_Shader.h"
 #include "Utils/KH_DebugUtils.h"
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image/stb_image_write.h"
+
 namespace
 {
     static void CreateTextures(bool multisample, uint32_t* outID, uint32_t count)
@@ -391,6 +394,103 @@ void KH_Framebuffer::UnbindTexture(uint32_t unit) const
 {
     glActiveTexture(GL_TEXTURE0 + unit);
     glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+bool KH_Framebuffer::SaveColorAttachmentToPNG(const std::string& filePath, uint32_t attachmentIndex) const
+{
+    if (filePath.empty())
+        return false;
+
+    if (attachmentIndex >= ColorAttachments.size())
+        return false;
+
+    const int width = static_cast<int>(Desc.Width);
+    const int height = static_cast<int>(Desc.Height);
+    if (width <= 0 || height <= 0)
+        return false;
+
+    const auto format = ColorAttachmentDescs[attachmentIndex].Format;
+    if (format == KH_FramebufferTextureFormat::R32I)
+    {
+        LOG_E("Saving R32I framebuffer attachments as PNG is not supported.");
+        return false;
+    }
+
+    GLint prevFBO = 0;
+    GLint prevReadBuffer = 0;
+    GLint prevPackAlignment = 0;
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFBO);
+    glGetIntegerv(GL_READ_BUFFER, &prevReadBuffer);
+    glGetIntegerv(GL_PACK_ALIGNMENT, &prevPackAlignment);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+    glReadBuffer(GL_COLOR_ATTACHMENT0 + static_cast<GLenum>(attachmentIndex));
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+
+    std::vector<unsigned char> pngPixels(static_cast<size_t>(width) * static_cast<size_t>(height) * 4ull, 255u);
+
+    if (format == KH_FramebufferTextureFormat::RGBA8)
+    {
+        glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pngPixels.data());
+    }
+    else if (format == KH_FramebufferTextureFormat::R8)
+    {
+        std::vector<unsigned char> red(static_cast<size_t>(width) * static_cast<size_t>(height), 0u);
+        glReadPixels(0, 0, width, height, GL_RED, GL_UNSIGNED_BYTE, red.data());
+
+        for (int i = 0; i < width * height; ++i)
+        {
+            const unsigned char value = red[i];
+            pngPixels[i * 4 + 0] = value;
+            pngPixels[i * 4 + 1] = value;
+            pngPixels[i * 4 + 2] = value;
+            pngPixels[i * 4 + 3] = 255u;
+        }
+    }
+    else if (
+        format == KH_FramebufferTextureFormat::RGBA16F ||
+        format == KH_FramebufferTextureFormat::RGBA32F ||
+        format == KH_FramebufferTextureFormat::RG16F)
+    {
+        const GLenum readFormat = (format == KH_FramebufferTextureFormat::RG16F) ? GL_RG : GL_RGBA;
+        const int channelCount = (format == KH_FramebufferTextureFormat::RG16F) ? 2 : 4;
+
+        std::vector<float> pixels(static_cast<size_t>(width) * static_cast<size_t>(height) * static_cast<size_t>(channelCount), 0.0f);
+        glReadPixels(0, 0, width, height, readFormat, GL_FLOAT, pixels.data());
+
+        for (int i = 0; i < width * height; ++i)
+        {
+            const float r = std::clamp(pixels[i * channelCount + 0], 0.0f, 1.0f);
+            const float g = std::clamp(pixels[i * channelCount + 1], 0.0f, 1.0f);
+            const float b = (channelCount >= 3)
+                ? std::clamp(pixels[i * channelCount + 2], 0.0f, 1.0f)
+                : 0.0f;
+            const float a = (channelCount >= 4)
+                ? std::clamp(pixels[i * channelCount + 3], 0.0f, 1.0f)
+                : 1.0f;
+
+            pngPixels[i * 4 + 0] = static_cast<unsigned char>(r * 255.0f + 0.5f);
+            pngPixels[i * 4 + 1] = static_cast<unsigned char>(g * 255.0f + 0.5f);
+            pngPixels[i * 4 + 2] = static_cast<unsigned char>(b * 255.0f + 0.5f);
+            pngPixels[i * 4 + 3] = static_cast<unsigned char>(a * 255.0f + 0.5f);
+        }
+    }
+    else
+    {
+        glPixelStorei(GL_PACK_ALIGNMENT, prevPackAlignment);
+        glReadBuffer(prevReadBuffer);
+        glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(prevFBO));
+        LOG_E("Unsupported framebuffer color format for PNG export.");
+        return false;
+    }
+
+    glPixelStorei(GL_PACK_ALIGNMENT, prevPackAlignment);
+    glReadBuffer(prevReadBuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(prevFBO));
+
+    stbi_flip_vertically_on_write(1);
+    const int strideInBytes = width * 4;
+    return stbi_write_png(filePath.c_str(), width, height, 4, pngPixels.data(), strideInBytes) != 0;
 }
 
 uint32_t KH_Framebuffer::GetColorAttachmentID(uint32_t index) const

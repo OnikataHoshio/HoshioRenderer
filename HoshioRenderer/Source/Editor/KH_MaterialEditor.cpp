@@ -9,6 +9,7 @@ namespace
         {
         case KH_ShaderFeatureType::DisneyBRDF: return "Disney BRDF";
         case KH_ShaderFeatureType::BSSRDF:     return "BSSRDF";
+        case KH_ShaderFeatureType::DisneyBSDF: return "Disney BSDF";
         default:                               return "Unknown";
         }
     }
@@ -34,13 +35,17 @@ void KH_MaterialEditor::Render()
     {
         ImGui::TextDisabled("No active shader feature");
     }
-    else if (auto* Disney = Scene.GetShaderFeatureAs<KH_DisneyBRDF>(ActiveType))
+    else if (auto* BRDF = Scene.GetShaderFeatureAs<KH_DisneyBRDF>(ActiveType))
     {
-        RenderDisneyBRDFEditor(*Disney, Editor);
+        RenderDisneyBRDFEditor(*BRDF, Editor);
     }
     else if (auto* BSSRDF = Scene.GetShaderFeatureAs<KH_BSSRDF>(ActiveType))
     {
         RenderBSSRDFEditor(*BSSRDF, Editor);
+    }
+    else if (auto* BSDF = Scene.GetShaderFeatureAs<KH_DisneyBSDF>(ActiveType))
+    {
+        RenderDisneyBSDFEditor(*BSDF, Editor);
     }
     else
     {
@@ -74,8 +79,8 @@ void KH_MaterialEditor::RenderDisneyBRDFEditor(KH_DisneyBRDF& Feature, KH_Editor
         mat.SheenTint = 0.0f;
         mat.Clearcoat = 0.0f;
         mat.ClearcoatGloss = 0.0f;
-        mat.IOR = 1.5f;
-        mat.Transmission = 0.0f;
+        //mat.IOR = 1.5f;
+        //mat.Transmission = 0.0f;
 
         SelectedMaterialID = Feature.AddMaterial(mat);
         Scene.UpdateMaterialSSBO();
@@ -164,8 +169,8 @@ void KH_MaterialEditor::RenderDisneyBRDFEditor(KH_DisneyBRDF& Feature, KH_Editor
 
     materialChanged |= ImGui::DragFloat("Clearcoat", &Mat.Clearcoat, 0.01f, 0.0f, 1.0f);
     materialChanged |= ImGui::DragFloat("ClearcoatGloss", &Mat.ClearcoatGloss, 0.01f, 0.0f, 1.0f);
-    materialChanged |= ImGui::DragFloat("IOR", &Mat.IOR, 0.01f, 1.0f, 3.0f);
-    materialChanged |= ImGui::DragFloat("Transmission", &Mat.Transmission, 0.01f, 0.0f, 1.0f);
+    //materialChanged |= ImGui::DragFloat("IOR", &Mat.IOR, 0.01f, 1.0f, 3.0f);
+    //materialChanged |= ImGui::DragFloat("Transmission", &Mat.Transmission, 0.01f, 0.0f, 1.0f);
 
     if (materialChanged)
     {
@@ -270,6 +275,126 @@ void KH_MaterialEditor::RenderBSSRDFEditor(KH_BSSRDF& Feature, KH_Editor& Editor
 
     materialChanged |= ImGui::DragFloat("Eta", &Mat.Eta, 0.001f, 1.0f, 3.0f);
 
+
+    if (materialChanged)
+    {
+        Scene.UpdateMaterialSSBO();
+        Editor.RequestFrameReset();
+    }
+}
+
+void KH_MaterialEditor::RenderDisneyBSDFEditor(KH_DisneyBSDF& Feature, KH_Editor& Editor)
+{
+    KH_GpuLBVHScene& Scene = Editor.Scene;
+    auto& Materials = Feature.GetMaterials();
+
+    if (ImGui::Button("New Material"))
+    {
+        KH_BSDFMaterial mat{};
+        mat.BaseColor = glm::vec3(0.8f);
+        mat.Emissive = glm::vec3(0.0f);
+        mat.Subsurface = 0.0f;
+        mat.Metallic = 0.0f;
+        mat.Specular = 0.5f;
+        mat.SpecularTint = 0.0f;
+        mat.Roughness = 0.5f;
+        mat.Anisotropic = 0.0f;
+        mat.Sheen = 0.0f;
+        mat.SheenTint = 0.0f;
+        mat.Clearcoat = 0.0f;
+        mat.ClearcoatGloss = 0.0f;
+        mat.IOR = 1.5f;
+        mat.Transmission = 0.0f;
+
+        SelectedMaterialID = Feature.AddMaterial(mat);
+        Scene.UpdateMaterialSSBO();
+        Editor.RequestFrameReset();
+    }
+
+    ImGui::SameLine();
+
+    const bool canDelete =
+        SelectedMaterialID >= 0 &&
+        SelectedMaterialID < static_cast<int>(Materials.size());
+
+    ImGui::BeginDisabled(!canDelete);
+    if (ImGui::Button("Delete Material"))
+    {
+        if (Scene.DeleteMaterial(Scene.GetActiveShaderFeatureType(), SelectedMaterialID))
+        {
+            const int count = Feature.GetMaterialCount();
+            SelectedMaterialID = (count <= 0) ? -1 : std::clamp(SelectedMaterialID, 0, count - 1);
+
+            Scene.UpdatePrimitiveSSBO();
+            Editor.RequestFrameReset();
+        }
+    }
+    ImGui::EndDisabled();
+
+    ImGui::Separator();
+
+    if (Materials.empty())
+    {
+        ImGui::TextDisabled("No materials");
+        return;
+    }
+
+    SelectedMaterialID = std::clamp(
+        SelectedMaterialID < 0 ? 0 : SelectedMaterialID,
+        0,
+        static_cast<int>(Materials.size()) - 1
+    );
+
+    std::vector<std::string> labels;
+    std::vector<const char*> items;
+    labels.reserve(Materials.size());
+    items.reserve(Materials.size());
+
+    for (int i = 0; i < static_cast<int>(Materials.size()); ++i)
+    {
+        labels.push_back("Material " + std::to_string(i));
+    }
+
+    for (auto& s : labels)
+    {
+        items.push_back(s.c_str());
+    }
+
+    ImGui::Text("Selected Material");
+    ImGui::SetNextItemWidth(-1.0f);
+    ImGui::Combo("##MaterialSelect", &SelectedMaterialID, items.data(), static_cast<int>(items.size()));
+
+    ImGui::Separator();
+
+    KH_BSDFMaterial& Mat = Materials[SelectedMaterialID];
+    bool materialChanged = false;
+
+    materialChanged |= ImGui::ColorEdit3(
+        "BaseColor",
+        &Mat.BaseColor.x,
+        ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR
+    );
+
+    materialChanged |= ImGui::ColorEdit3(
+        "Emissive",
+        &Mat.Emissive.x,
+        ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR
+    );
+
+    materialChanged |= ImGui::DragFloat("Subsurface", &Mat.Subsurface, 0.01f, 0.0f, 1.0f);
+    materialChanged |= ImGui::DragFloat("Metallic", &Mat.Metallic, 0.01f, 0.0f, 1.0f);
+    materialChanged |= ImGui::DragFloat("Specular", &Mat.Specular, 0.01f, 0.0f, 1.0f);
+    materialChanged |= ImGui::DragFloat("SpecularTint", &Mat.SpecularTint, 0.01f, 0.0f, 1.0f);
+
+    materialChanged |= ImGui::DragFloat("Roughness", &Mat.Roughness, 0.01f, 0.0f, 1.0f);
+    materialChanged |= ImGui::DragFloat("Anisotropic", &Mat.Anisotropic, 0.01f, 0.0f, 1.0f);
+    materialChanged |= ImGui::DragFloat("Sheen", &Mat.Sheen, 0.01f, 0.0f, 1.0f);
+    materialChanged |= ImGui::DragFloat("SheenTint", &Mat.SheenTint, 0.01f, 0.0f, 1.0f);
+
+    materialChanged |= ImGui::DragFloat("Clearcoat", &Mat.Clearcoat, 0.01f, 0.0f, 1.0f);
+    materialChanged |= ImGui::DragFloat("ClearcoatGloss", &Mat.ClearcoatGloss, 0.01f, 0.0f, 1.0f);
+    materialChanged |= ImGui::DragFloat("IOR", &Mat.IOR, 0.01f, 1.0f, 3.0f);
+    materialChanged |= ImGui::DragFloat("Transmission", &Mat.Transmission, 0.01f, 0.0f, 1.0f);
 
     if (materialChanged)
     {

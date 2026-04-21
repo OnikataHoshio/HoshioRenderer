@@ -16,7 +16,8 @@ enum class KH_BuiltinModelType
     FullscreenQuad,
     Plane,
     Cube,
-    EmptyCube
+    EmptyCube,
+    Sphere
 };
 
 
@@ -33,7 +34,12 @@ public:
 
     void LoadModel(const std::string& path);
 
-    static KH_Model CreateBuiltin(KH_BuiltinModelType type, float size = 1.0f);
+    static KH_Model CreateBuiltin(
+        KH_BuiltinModelType type,
+        float size = 1.0f,
+        unsigned int sectorCount = 64,
+        unsigned int stackCount = 32
+    );
 
     KH_HitResult Hit(const KH_Ray& Ray) const override;
     virtual KH_PickResult Pick(
@@ -52,6 +58,8 @@ public:
     KH_ModelSourceType GetSourceType() const { return SourceType; }
     KH_BuiltinModelType GetBuiltinType() const { return BuiltinType; }
     float GetBuiltinSize() const { return BuiltinSize; }
+    unsigned int GetBuiltinSectorCount() const { return BuiltinSectorCount; }
+    unsigned int GetBuiltinStackCount() const { return BuiltinStackCount; }
     const std::string& GetSourcePath() const { return SourcePath; }
 
     std::vector<KH_Mesh>& GetMeshes() { return Meshes; }
@@ -72,6 +80,8 @@ private:
     KH_ModelSourceType SourceType = KH_ModelSourceType::Inline;
     KH_BuiltinModelType BuiltinType = KH_BuiltinModelType::None;
     float BuiltinSize = 1.0f;
+    unsigned int BuiltinSectorCount = 64;
+    unsigned int BuiltinStackCount = 32;
 
     void ProcessNode(aiNode* node, const aiScene* scene);
     KH_Mesh ProcessMesh(aiMesh* mesh, const aiScene* scene);
@@ -90,9 +100,20 @@ public:
     static KH_Mesh CreateCubeMesh(float size = 1.0f);
     static KH_Mesh CreateEmptyCubeMesh(float size = 1.0f);
     static KH_Model CreateFullscreenQuad(float size = 1.0f);
+    static KH_Mesh CreateSphereMesh(
+        float size = 1.0f,
+        unsigned int sectorCount = 64,
+        unsigned int stackCount = 32
+    );
+
     static KH_Model CreatePlane(float size = 1.0f);
     static KH_Model CreateCube(float size = 1.0f);
     static KH_Model CreateEmptyCube(float size = 1.0f);
+    static KH_Model CreateSphere(
+        float size = 1.0f,
+        unsigned int sectorCount = 64,
+        unsigned int stackCount = 32
+    );
 };
 
 class KH_DefaultModels : public KH_Singleton<KH_DefaultModels>

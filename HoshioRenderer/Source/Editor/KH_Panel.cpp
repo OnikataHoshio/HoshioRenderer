@@ -11,6 +11,7 @@ namespace
         {
         case KH_ShaderFeatureType::DisneyBRDF: return "Disney BRDF";
         case KH_ShaderFeatureType::BSSRDF:     return "BSSRDF";
+        case KH_ShaderFeatureType::DisneyBSDF: return "Disney BSDF";
         default:                               return "Unknown";
         }
     }

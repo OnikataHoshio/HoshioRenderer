@@ -16,8 +16,6 @@ struct KH_BRDFMaterial
     float SheenTint = 0.0f;
     float Clearcoat = 0.0f;
     float ClearcoatGloss = 0.0f;
-    float IOR = 1.0f;
-    float Transmission = 0.0f;
 };
 
 struct KH_BRDFMaterialEncoded

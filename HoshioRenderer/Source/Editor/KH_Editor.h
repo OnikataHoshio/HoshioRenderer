@@ -2,7 +2,6 @@
 #include "KH_Camera.h"
 #include "KH_Window.h"
 #include "KH_Canvas.h"
-
 #include "KH_MaterialEditor.h"
 #include "Scene/KH_Scene.h"
 
@@ -72,7 +71,13 @@ public:
     bool DeleteSelectedObject(bool OnlyDeleteModel = true);
 
     bool AddExternalModelFromFile(const std::string& filePath, int materialSlotID = 0);
-    bool AddBuiltinModel(int builtinTypeIndex, float size = 1.0f, int materialSlotID = 0);
+    bool AddBuiltinModel(
+        int builtinTypeIndex,
+        float size = 1.0f,
+        int materialSlotID = 0,
+        unsigned int sectorCount = 64,
+        unsigned int stackCount = 32
+    );
 
     KH_Camera Camera;
     KH_Window Window;
@@ -121,6 +126,13 @@ private:
 
     std::string CurrentSceneXmlPath;
 
+    bool bAddBuiltinSphereDialogRequested = false;
+
+    float PendingBuiltinSphereSize = 1.0f;
+    int PendingBuiltinSphereMaterialSlotID = 0;
+    int PendingBuiltinSphereSectorCount = 64;
+    int PendingBuiltinSphereStackCount = 32;
+
     KH_Editor();
     ~KH_Editor();
 
@@ -148,6 +160,7 @@ private:
     bool SaveSceneToFile(const std::string& filePath);
     bool SaveSceneAs();
     bool SaveScene();
+    bool ExportCurrentFramebufferAsImage();
 
     void NewScene();
 
@@ -157,4 +170,7 @@ private:
     int EnsureUsableMaterialSlot(int requestedSlot);
     void EnsureDefaultMaterialsForAllShaderFeatures();
     void InitializeSpawnedObjectTransform(KH_Object& object);
+
+    void OpenAddBuiltinSphereDialog(float size = 1.0f, int materialSlotID = 0);
+    void DrawAddBuiltinSphereDialog();
 };

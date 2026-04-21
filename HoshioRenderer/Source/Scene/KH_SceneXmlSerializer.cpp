@@ -132,6 +132,10 @@ namespace
             scene.EmplaceShaderFeature<KH_BSSRDF>(KH_ShaderFeatureType::BSSRDF);
             return true;
 
+        case KH_ShaderFeatureType::DisneyBSDF:
+            scene.EmplaceShaderFeature<KH_DisneyBSDF>(KH_ShaderFeatureType::DisneyBSDF);
+            return true;
+
         default:
             return false;
         }
@@ -165,7 +169,63 @@ namespace
             model.SetScale(scale);
     }
 
-    void WriteDisneyMaterial(XMLDocument& doc, XMLElement* materialsElem, const KH_BRDFMaterial& mat, int id)
+    void WriteDisneyBRDFMaterial(XMLDocument& doc, XMLElement* materialsElem, const KH_BRDFMaterial& mat, int id)
+    {
+        XMLElement* materialElem = doc.NewElement("Material");
+
+        materialElem->SetAttribute("id", id);
+        materialElem->SetAttribute("baseColor", Vec3ToString(mat.BaseColor).c_str());
+        materialElem->SetAttribute("emissive", Vec3ToString(mat.Emissive).c_str());
+
+        materialElem->SetAttribute("subsurface", mat.Subsurface);
+        materialElem->SetAttribute("metallic", mat.Metallic);
+        materialElem->SetAttribute("specular", mat.Specular);
+        materialElem->SetAttribute("specularTint", mat.SpecularTint);
+
+        materialElem->SetAttribute("roughness", mat.Roughness);
+        materialElem->SetAttribute("anisotropic", mat.Anisotropic);
+        materialElem->SetAttribute("sheen", mat.Sheen);
+        materialElem->SetAttribute("sheenTint", mat.SheenTint);
+
+        materialElem->SetAttribute("clearcoat", mat.Clearcoat);
+        materialElem->SetAttribute("clearcoatGloss", mat.ClearcoatGloss);
+
+
+        materialsElem->InsertEndChild(materialElem);
+    }
+
+    KH_BRDFMaterial ReadDisneyBRDFMaterial(const XMLElement* materialElem)
+    {
+        KH_BRDFMaterial mat{};
+
+        glm::vec3 baseColor(1.0f);
+        glm::vec3 emissive(0.0f);
+
+        StringToVec3(materialElem->Attribute("baseColor"), baseColor);
+        StringToVec3(materialElem->Attribute("emissive"), emissive);
+
+        mat.BaseColor = baseColor;
+        mat.Emissive = emissive;
+
+        materialElem->QueryFloatAttribute("subsurface", &mat.Subsurface);
+        materialElem->QueryFloatAttribute("metallic", &mat.Metallic);
+        materialElem->QueryFloatAttribute("specular", &mat.Specular);
+        materialElem->QueryFloatAttribute("specularTint", &mat.SpecularTint);
+
+        materialElem->QueryFloatAttribute("roughness", &mat.Roughness);
+        materialElem->QueryFloatAttribute("anisotropic", &mat.Anisotropic);
+        materialElem->QueryFloatAttribute("sheen", &mat.Sheen);
+        materialElem->QueryFloatAttribute("sheenTint", &mat.SheenTint);
+
+        materialElem->QueryFloatAttribute("clearcoat", &mat.Clearcoat);
+        materialElem->QueryFloatAttribute("clearcoatGloss", &mat.ClearcoatGloss);
+
+
+        return mat;
+    }
+
+
+    void WriteDisneyBSDFMaterial(XMLDocument& doc, XMLElement* materialsElem, const KH_BSDFMaterial& mat, int id)
     {
         XMLElement* materialElem = doc.NewElement("Material");
 
@@ -191,9 +251,9 @@ namespace
         materialsElem->InsertEndChild(materialElem);
     }
 
-    KH_BRDFMaterial ReadDisneyMaterial(const XMLElement* materialElem)
+    KH_BSDFMaterial ReadDisneyBSDFMaterial(const XMLElement* materialElem)
     {
-        KH_BRDFMaterial mat{};
+        KH_BSDFMaterial mat{};
 
         glm::vec3 baseColor(1.0f);
         glm::vec3 emissive(0.0f);
@@ -221,6 +281,7 @@ namespace
 
         return mat;
     }
+
 
     void WriteBSSRDFMaterial(XMLDocument& doc, XMLElement* materialsElem, const KH_BSSRDFMaterial& mat, int id)
     {
@@ -257,6 +318,8 @@ namespace
         materialElem->QueryFloatAttribute("scale", &mat.Scale);
         return mat;
     }
+
+
 
     void WriteSceneSettings(XMLDocument& doc, XMLElement* root, const KH_SceneBase& scene)
     {
@@ -295,12 +358,12 @@ namespace
         XMLElement* materialsElem = doc.NewElement("Materials");
         featureElem->InsertEndChild(materialsElem);
 
-        if (const KH_DisneyBRDF* disney = dynamic_cast<const KH_DisneyBRDF*>(feature))
+        if (const KH_DisneyBRDF* brdf = dynamic_cast<const KH_DisneyBRDF*>(feature))
         {
-            const auto& materials = disney->GetMaterials();
+            const auto& materials = brdf->GetMaterials();
             for (int i = 0; i < static_cast<int>(materials.size()); ++i)
             {
-                WriteDisneyMaterial(doc, materialsElem, materials[i], i);
+                WriteDisneyBRDFMaterial(doc, materialsElem, materials[i], i);
             }
         }
         else if (const KH_BSSRDF* bssrdf = dynamic_cast<const KH_BSSRDF*>(feature))
@@ -309,6 +372,14 @@ namespace
             for (int i = 0; i < static_cast<int>(materials.size()); ++i)
             {
                 WriteBSSRDFMaterial(doc, materialsElem, materials[i], i);
+            }
+        }
+        else if (const KH_DisneyBSDF* bsdf = dynamic_cast<const KH_DisneyBSDF*>(feature))
+        {
+            const auto& materials = bsdf->GetMaterials();
+            for (int i = 0; i < static_cast<int>(materials.size()); ++i)
+            {
+                WriteDisneyBSDFMaterial(doc, materialsElem, materials[i], i);
             }
         }
 
@@ -347,13 +418,13 @@ namespace
         if (materialsElem == nullptr)
             return true;
 
-        if (KH_DisneyBRDF* disney = dynamic_cast<KH_DisneyBRDF*>(feature))
+        if (KH_DisneyBRDF* brdf = dynamic_cast<KH_DisneyBRDF*>(feature))
         {
             for (const XMLElement* materialElem = materialsElem->FirstChildElement("Material");
                 materialElem != nullptr;
                 materialElem = materialElem->NextSiblingElement("Material"))
             {
-                disney->AddMaterial(ReadDisneyMaterial(materialElem));
+                brdf->AddMaterial(ReadDisneyBRDFMaterial(materialElem));
             }
             return true;
         }
@@ -365,6 +436,17 @@ namespace
                 materialElem = materialElem->NextSiblingElement("Material"))
             {
                 bssrdf->AddMaterial(ReadBSSRDFMaterial(materialElem));
+            }
+            return true;
+        }
+
+        if (KH_DisneyBSDF* bsdf = dynamic_cast<KH_DisneyBSDF*>(feature))
+        {
+            for (const XMLElement* materialElem = materialsElem->FirstChildElement("Material");
+                materialElem != nullptr;
+                materialElem = materialElem->NextSiblingElement("Material"))
+            {
+                bsdf->AddMaterial(ReadDisneyBSDFMaterial(materialElem));
             }
             return true;
         }
@@ -539,8 +621,26 @@ namespace
         if (!StringToBuiltinType(modelElem->Attribute("builtinType"), builtinType))
             return false;
 
-        const float size = modelElem->FloatAttribute("size", 1.0f);
-        outModel = KH_Model::CreateBuiltin(builtinType, size);
+        float size = 1.0f;
+        unsigned int sectorCount = 64;
+        unsigned int stackCount = 32;
+
+        if (modelElem->QueryFloatAttribute("size", &size) != XML_SUCCESS)
+            return false;
+
+        if (modelElem->QueryUnsignedAttribute("sectorCount", &sectorCount) != XML_SUCCESS)
+            return false;
+
+        if (modelElem->QueryUnsignedAttribute("stackCount", &stackCount) != XML_SUCCESS)
+            return false;
+
+        outModel = KH_Model::CreateBuiltin(
+            builtinType,
+            size,
+            sectorCount,
+            stackCount
+        );
+
         return true;
     }
 
@@ -558,9 +658,13 @@ namespace
         case KH_ModelSourceType::Builtin:
         {
             const std::string builtinTypeName = std::string(magic_enum::enum_name(model.GetBuiltinType()));
+
             modelElem->SetAttribute("sourceType", "Builtin");
             modelElem->SetAttribute("builtinType", builtinTypeName.c_str());
             modelElem->SetAttribute("size", model.GetBuiltinSize());
+            modelElem->SetAttribute("sectorCount", model.GetBuiltinSectorCount());
+            modelElem->SetAttribute("stackCount", model.GetBuiltinStackCount());
+
             break;
         }
 

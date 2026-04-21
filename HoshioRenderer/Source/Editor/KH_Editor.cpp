@@ -73,6 +73,7 @@ namespace
         {
         case KH_ShaderFeatureType::DisneyBRDF: return "Disney BRDF";
         case KH_ShaderFeatureType::BSSRDF:     return "BSSRDF";
+        case KH_ShaderFeatureType::DisneyBSDF: return "Disney BSDF";
         default:                               return "Unknown";
         }
     }
@@ -89,7 +90,6 @@ namespace
             mat.Emissive = glm::vec3(0.0f);
             mat.Specular = 0.5f;
             mat.Roughness = 0.5f;
-            mat.IOR = 1.5f;
             brdf->AddMaterial(mat);
         }
         else if (auto* bssrdf = dynamic_cast<KH_BSSRDF*>(feature))
@@ -101,6 +101,16 @@ namespace
             mat.Eta = 1.3f;
             mat.Scale = 0.05f;
             bssrdf->AddMaterial(mat);
+        }
+        else if (auto* bsdf = dynamic_cast<KH_DisneyBSDF*>(feature))
+        {
+            KH_BSDFMaterial mat{};
+            mat.BaseColor = glm::vec3(0.8f);
+            mat.Emissive = glm::vec3(0.0f);
+            mat.Specular = 0.5f;
+            mat.Roughness = 0.5f;
+            mat.IOR = 1.5f;
+            bsdf->AddMaterial(mat);
         }
     }
 
@@ -116,6 +126,18 @@ namespace
         std::filesystem::path p(path);
         if (!p.has_extension())
             p.replace_extension(".xml");
+
+        return p.string();
+    }
+
+    std::string EnsurePngExtension(std::string path)
+    {
+        if (path.empty())
+            return path;
+
+        std::filesystem::path p(path);
+        if (!p.has_extension())
+            p.replace_extension(".png");
 
         return p.string();
     }
@@ -181,7 +203,6 @@ void KH_Editor::SetDefaultScenePath(std::string ScenePath)
 const std::string& KH_Editor::GetDefaultScenePath()
 {
     return DefaultScenePath;
-    return DefaultScenePath;
 }
 
 uint32_t KH_Editor::GetEditorWidth()
@@ -232,6 +253,7 @@ void KH_Editor::EndRender()
 {
     Canvas.Render();
     DrawCanvasContextMenu();
+    DrawAddBuiltinSphereDialog();
     UpdateSelectedObjectID();
 
     Console.Render();
@@ -446,7 +468,12 @@ bool KH_Editor::AddExternalModelFromFile(const std::string& filePath, int materi
     return true;
 }
 
-bool KH_Editor::AddBuiltinModel(int builtinTypeIndex, float size, int materialSlotID)
+bool KH_Editor::AddBuiltinModel(
+    int builtinTypeIndex,
+    float size,
+    int materialSlotID,
+    unsigned int sectorCount,
+    unsigned int stackCount)
 {
     const int slot = EnsureUsableMaterialSlot(materialSlotID);
 
@@ -460,10 +487,7 @@ bool KH_Editor::AddBuiltinModel(int builtinTypeIndex, float size, int materialSl
         model = KH_PrimitiveFactory::CreateCube(size);
         break;
     case 2:
-        model = KH_PrimitiveFactory::CreateEmptyCube(size);
-        break;
-    case 3:
-        model = KH_PrimitiveFactory::CreateFullscreenQuad(size);
+        model = KH_PrimitiveFactory::CreateSphere(size, sectorCount, stackCount);
         break;
     default:
         return false;
@@ -480,7 +504,6 @@ bool KH_Editor::AddBuiltinModel(int builtinTypeIndex, float size, int materialSl
 
     return true;
 }
-
 
 glm::vec3 KH_Editor::GetViewManipulatorPivot() const
 {
@@ -528,11 +551,8 @@ void KH_Editor::DrawMainMenuBar()
                 if (ImGui::MenuItem("Cube"))
                     AddBuiltinModel(1, 1.0f, 0);
 
-                if (ImGui::MenuItem("EmptyCube"))
-                    AddBuiltinModel(2, 1.0f, 0);
-
-                if (ImGui::MenuItem("FullscreenQuad"))
-                    AddBuiltinModel(3, 1.0f, 0);
+                if (ImGui::MenuItem("Sphere"))
+                    OpenAddBuiltinSphereDialog(1.0f, 0);
 
                 ImGui::EndMenu();
             }
@@ -557,6 +577,11 @@ void KH_Editor::DrawMainMenuBar()
         if (ImGui::MenuItem("Save As...", "Ctrl+Shift+S", false, true))
         {
             SaveSceneAs();
+        }
+
+        if (ImGui::MenuItem("Export As Image...", nullptr, false, true))
+        {
+            ExportCurrentFramebufferAsImage();
         }
 
         ImGui::Separator();
@@ -589,7 +614,7 @@ void KH_Editor::DrawMainMenuBar()
         SaveSceneAs();
     }
 
-    if (ctrl &&  ImGui::IsKeyPressed(ImGuiKey_N, false))
+    if (ctrl && ImGui::IsKeyPressed(ImGuiKey_N, false))
     {
         NewScene();
     }
@@ -615,7 +640,7 @@ bool KH_Editor::ImportSceneFromFile(const std::string& filePath)
     {
         return false;
     }
-
+    EnsureDefaultMaterialsForAllShaderFeatures();
     Scene.BindAndBuild();
 
     CurrentSceneXmlPath = filePath;
@@ -782,12 +807,9 @@ bool KH_Editor::SaveSceneToFile(const std::string& filePath)
 
 bool KH_Editor::SaveSceneAs()
 {
-
-    std::string defaultPath = CurrentSceneXmlPath.empty() ? "." : CurrentSceneXmlPath;
-
     std::string path = pfd::save_file(
         "Save Scene As",
-        defaultPath,
+        ".",
         { "Scene XML Files", "*.xml", "All Files", "*" }
     ).result();
 
@@ -804,6 +826,28 @@ bool KH_Editor::SaveScene()
         return SaveSceneToFile(CurrentSceneXmlPath);
 
     return SaveSceneAs();
+}
+
+bool KH_Editor::ExportCurrentFramebufferAsImage()
+{
+    std::string path = pfd::save_file(
+        "Export As Image",
+        ".",
+        { "PNG Files", "*.png", "All Files", "*" }
+    ).result();
+
+    path = EnsurePngExtension(path);
+    if (path.empty())
+        return false;
+
+    const bool bSuccess = Canvas.GetLastPostProcessFramebuffer().SaveColorAttachmentToPNG(path, 0);
+
+    if (bSuccess)
+        LOG_D(std::format("Framebuffer exported to '{}'", path));
+    else
+        LOG_E(std::format("Failed to export framebuffer to '{}'", path));
+
+    return bSuccess;
 }
 
 void KH_Editor::NewScene()
@@ -915,11 +959,8 @@ void KH_Editor::DrawCanvasContextMenu()
             if (ImGui::MenuItem("Cube"))
                 AddBuiltinModel(1, 1.0f, 0);
 
-            if (ImGui::MenuItem("EmptyCube"))
-                AddBuiltinModel(2, 1.0f, 0);
-
-            if (ImGui::MenuItem("FullscreenQuad"))
-                AddBuiltinModel(3, 1.0f, 0);
+            if (ImGui::MenuItem("Sphere"))
+                OpenAddBuiltinSphereDialog(1.0f, 0);
 
             ImGui::EndMenu();
         }
@@ -927,6 +968,76 @@ void KH_Editor::DrawCanvasContextMenu()
         if (ImGui::MenuItem("Delete Selected Model"))
         {
             DeleteSelectedObject(true);
+        }
+
+        ImGui::EndPopup();
+    }
+
+
+}
+
+void KH_Editor::OpenAddBuiltinSphereDialog(float size, int materialSlotID)
+{
+    PendingBuiltinSphereSize = size;
+    PendingBuiltinSphereMaterialSlotID = materialSlotID;
+
+    PendingBuiltinSphereSectorCount = 64;
+    PendingBuiltinSphereStackCount = 32;
+
+    bAddBuiltinSphereDialogRequested = true;
+}
+
+void KH_Editor::DrawAddBuiltinSphereDialog()
+{
+    if (bAddBuiltinSphereDialogRequested)
+    {
+        ImGui::OpenPopup("Create Sphere");
+        bAddBuiltinSphereDialogRequested = false;
+    }
+
+    if (ImGui::BeginPopupModal("Create Sphere", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        ImGui::TextUnformatted("Sphere Parameters");
+        ImGui::Separator();
+
+        ImGui::InputFloat("Size", &PendingBuiltinSphereSize, 0.1f, 1.0f, "%.3f");
+        ImGui::InputInt("Sector Count", &PendingBuiltinSphereSectorCount);
+        ImGui::InputInt("Stack Count", &PendingBuiltinSphereStackCount);
+
+        ImGui::TextDisabled("Sector Count >= 3, Stack Count >= 2");
+
+        ImGui::Separator();
+
+        if (ImGui::Button("Create", ImVec2(100.0f, 0.0f)))
+        {
+            float size = PendingBuiltinSphereSize;
+            if (size <= 0.0f)
+                size = 0.001f;
+
+            int sectorCount = PendingBuiltinSphereSectorCount;
+            if (sectorCount < 3)
+                sectorCount = 3;
+
+            int stackCount = PendingBuiltinSphereStackCount;
+            if (stackCount < 2)
+                stackCount = 2;
+
+            AddBuiltinModel(
+                2,
+                size,
+                PendingBuiltinSphereMaterialSlotID,
+                static_cast<unsigned int>(sectorCount),
+                static_cast<unsigned int>(stackCount)
+            );
+
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::SameLine();
+
+        if (ImGui::Button("Cancel", ImVec2(100.0f, 0.0f)))
+        {
+            ImGui::CloseCurrentPopup();
         }
 
         ImGui::EndPopup();

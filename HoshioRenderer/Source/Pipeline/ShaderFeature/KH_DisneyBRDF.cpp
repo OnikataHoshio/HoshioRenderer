@@ -54,8 +54,8 @@ std::vector<KH_BRDFMaterialEncoded> KH_DisneyBRDF::EncodeMaterials() const
         encoded[i].Param3 = glm::vec4(
             mat.Clearcoat,
             mat.ClearcoatGloss,
-            mat.IOR,
-            mat.Transmission);
+            0.0f,
+            0.0f);
     }
 
     return encoded;

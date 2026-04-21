@@ -10,7 +10,6 @@ struct Primitive{
     ivec2 MaterialSlot;
 };
 
-
 struct BSSRDFMaterial{
     vec4 Emissive;
     vec4 BaseColor;

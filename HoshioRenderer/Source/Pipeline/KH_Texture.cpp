@@ -564,14 +564,14 @@ KH_ExampleTextures::KH_ExampleTextures()
 void KH_ExampleTextures::InitTextures()
 {
     SkyboxHDR = KH_TextureManager::Instance().LoadTexture(
-        "Assert/Images/HDR/photo_studio_loft_hall_4k.hdr",
+        "Assert/Images/HDR/qwantani_dusk_2_puresky_4k.hdr",
         false,
         KH_TEXTURE_TYPE::HDR,
         true
     );
 
     SkyboxHDRCache = KH_TextureManager::Instance().CreateHDRCache(
-        "Assert/Images/HDR/photo_studio_loft_hall_4k.hdr",
+        "Assert/Images/HDR/qwantani_dusk_2_puresky_4k.hdr",
         false,
         true
     );
